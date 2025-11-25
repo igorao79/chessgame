@@ -16,8 +16,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   // Создаём socket instance один раз
   const socket = useMemo(() => {
     const socketInstance = io(process.env.NEXT_PUBLIC_SOCKET_URL || '', {
-      path: '/api/socket',
-      addTrailingSlash: false,
+      path: '/socket.io/',
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+      autoConnect: true,
     });
     return socketInstance;
   }, []);

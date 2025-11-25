@@ -22,11 +22,15 @@ const httpServer = createServer((req, res) => {
 
 // Инициализация Socket.io
 const io = new Server(httpServer, {
+  path: '/socket.io/',
   cors: {
-    origin: '*', // В production укажите конкретный домен Vercel
+    origin: ['https://chessgame-tb78.vercel.app', 'http://localhost:3000'],
     methods: ['GET', 'POST'],
+    credentials: true,
+    allowedHeaders: ['Content-Type'],
   },
   transports: ['websocket', 'polling'],
+  allowEIO3: true,
 });
 
 console.log('Socket.io сервер инициализирован');
