@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useSocket } from '@/contexts/SocketContext';
-import { Chess } from 'chess.js';
+import { Chess, Square } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
+
+interface JoinRoomResponse {
+  error?: string;
+  success?: boolean;
+  color?: 'white' | 'black';
+}
 
 export default function OnlineGame() {
   const { socket, isConnected } = useSocket();
@@ -61,12 +67,12 @@ export default function OnlineGame() {
   const joinRoom = () => {
     if (!socket || !inputRoomId) return;
 
-    socket.emit('join-room', { roomId: inputRoomId }, (response: any) => {
+    socket.emit('join-room', { roomId: inputRoomId }, (response: JoinRoomResponse) => {
       if (response.error) {
         setGameStatus(`Ошибка: ${response.error}`);
       } else {
         setRoomId(inputRoomId);
-        setPlayerColor(response.color);
+        setPlayerColor(response.color || 'white');
       }
     });
   };
@@ -244,11 +250,14 @@ export default function OnlineGame() {
             position: fen,
             boardOrientation: playerColor,
             onPieceDrop: ({ sourceSquare, targetSquare }) => {
+              if (!sourceSquare || !targetSquare) return false;
               return makeMove(sourceSquare, targetSquare);
             },
             onSquareClick: ({ square }) => {
+              if (!square) return;
+              
               if (!moveFrom) {
-                const piece = chess.get(square);
+                const piece = chess.get(square as Square);
                 if (piece && piece.color === chess.turn()) {
                   setMoveFrom(square);
                 }

@@ -20,33 +20,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [chess, setChess] = useState<Chess | null>(null);
 
-  const startGame = useCallback(
-    (mode: GameMode, playerColor: PlayerColor = 'white', difficulty: Difficulty = 'medium') => {
-      const newChess = new Chess();
-      const newGameState: GameState = {
-        id: Math.random().toString(36).substring(7),
-        mode,
-        status: 'playing',
-        fen: newChess.fen(),
-        moves: [],
-        playerColor,
-        currentTurn: 'white',
-        difficulty: mode === 'ai' ? difficulty : undefined,
-      };
-
-      setChess(newChess);
-      setGameState(newGameState);
-
-      // Если AI играет белыми, делаем первый ход
-      if (mode === 'ai' && playerColor === 'black') {
-        setTimeout(() => {
-          makeAIMove(newChess, newGameState);
-        }, 500);
-      }
-    },
-    []
-  );
-
   const makeAIMove = useCallback((chessInstance: Chess, state: GameState) => {
     const bestMove = getBestMove(chessInstance.fen(), state.difficulty);
     if (bestMove) {
@@ -72,6 +45,33 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
     }
   }, []);
+
+  const startGame = useCallback(
+    (mode: GameMode, playerColor: PlayerColor = 'white', difficulty: Difficulty = 'medium') => {
+      const newChess = new Chess();
+      const newGameState: GameState = {
+        id: Math.random().toString(36).substring(7),
+        mode,
+        status: 'playing',
+        fen: newChess.fen(),
+        moves: [],
+        playerColor,
+        currentTurn: 'white',
+        difficulty: mode === 'ai' ? difficulty : undefined,
+      };
+
+      setChess(newChess);
+      setGameState(newGameState);
+
+      // Если AI играет белыми, делаем первый ход
+      if (mode === 'ai' && playerColor === 'black') {
+        setTimeout(() => {
+          makeAIMove(newChess, newGameState);
+        }, 500);
+      }
+    },
+    [makeAIMove]
+  );
 
   const makeMove = useCallback(
     (move: Move): boolean => {

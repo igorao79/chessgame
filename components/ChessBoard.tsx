@@ -19,7 +19,7 @@ export default function ChessBoard() {
         options={{
           position: gameState.fen,
           boardOrientation: gameState.playerColor === 'white' ? 'white' : 'black',
-          onPieceDrop: ({ piece, sourceSquare, targetSquare }) => {
+          onPieceDrop: ({ sourceSquare, targetSquare }) => {
             if (!isPlayerTurn()) return false;
 
             const move = makeMove({
