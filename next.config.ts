@@ -3,14 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   reactStrictMode: true,
-  webpack: (config) => {
-    // Отключаем warnings для external packages
-    config.externals.push({
-      'utf-8-validate': 'commonjs utf-8-validate',
-      'bufferutil': 'commonjs bufferutil',
-    });
-    return config;
-  },
+  // Пустой turbopack config для Next.js 16+
+  turbopack: {},
 };
 
 export default nextConfig;
