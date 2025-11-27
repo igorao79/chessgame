@@ -7,9 +7,12 @@ import GameInfo from '@/components/GameInfo';
 import GameModeSelector from '@/components/GameModeSelector';
 import OnlineGame from '@/components/OnlineGame';
 import UserProfile from '@/components/UserProfile';
+import { PieceThemeSelector } from '@/components/PieceThemeSelector';
+import { ChessBackground } from '@/components/ChessBackground';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import { GiChessKing } from 'react-icons/gi';
 
 function HomePage() {
   const { gameState } = useGame();
@@ -31,20 +34,27 @@ function HomePage() {
   }, [searchParams, isAuthenticated]);
 
   return (
-    <main className="min-h-screen theme-bg-primary py-4 px-4">
-      {/* Хедер с профилем пользователя */}
-      <header className="py-2">
-        <div className="container mx-auto max-w-7xl flex justify-between items-center">
-          <Link href="/">
-            <h1 className="text-xl font-bold theme-text-primary cursor-pointer hover:theme-text-accent transition-colors">
-              ♟️ Шахматы
-            </h1>
-          </Link>
-          <UserProfile />
+    <main className="min-h-screen theme-bg-primary relative">
+      {/* Анимированный шахматный фон */}
+      <ChessBackground />
+
+      {/* Хедер с эффектом жидкого стекла */}
+      <header className="relative z-10">
+        <div className="glassmorphism-header-full">
+          <div className="max-w-7xl mx-auto flex justify-between items-center px-6 py-3">
+            <Link href="/">
+              <h1 className="text-xl font-bold theme-text-primary hover:theme-text-accent transition-all duration-300 hover:scale-105 inline-flex items-center justify-center gap-2 cursor-pointer">
+                <GiChessKing className="text-2xl flex-shrink-0" style={{ marginTop: '-6px' }} />
+                <span>Chessarao</span>
+              </h1>
+            </Link>
+            <UserProfile />
+          </div>
         </div>
       </header>
 
-      <div className="container mx-auto max-w-7xl">
+      <div className="py-4 px-4">
+        <div className="container mx-auto max-w-7xl relative z-10">
         {!gameState && !isOnlineMode ? (
           <div className="flex items-center justify-center min-h-[80vh]">
             <GameModeSelector />
@@ -52,16 +62,19 @@ function HomePage() {
         ) : gameState?.mode === 'online' || isOnlineMode ? (
           <OnlineGame />
         ) : (
-          <div className="grid lg:grid-cols-2 gap-8 items-start">
-            <div>
+          <div className="flex flex-col items-center gap-6">
+            {/* Информация об игре по центру */}
+            <div className="flex justify-center">
               <GameInfo />
             </div>
-            <div>
-              <ChessBoard />
-            </div>
+
+            {/* Шахматная доска */}
+            <ChessBoard />
           </div>
         )}
+        </div>
       </div>
+
     </main>
   );
 }
@@ -74,8 +87,8 @@ function LoadingFallback() {
           <div className="text-6xl mb-4">♟️</div>
           <p className="text-gray-600">Загрузка...</p>
         </div>
-        </div>
-      </main>
+      </div>
+    </main>
   );
 }
 

@@ -32,44 +32,53 @@ export default function GameInfo() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">{getModeText()}</h2>
-          <p className="text-lg text-gray-600 mt-2">{getStatusText()}</p>
-          <p className="text-sm text-gray-500 mt-1">
-            Вы играете за: {gameState.playerColor === 'white' ? 'Белые' : 'Черные'}
-          </p>
-        </div>
+    <div className="theme-bg-primary rounded-lg shadow-xl p-4 max-w-sm">
+      {/* Заголовок режима игры */}
+      <div className="text-center mb-3">
+        <h2 className="text-lg font-bold theme-text-primary">{getModeText()}</h2>
+      </div>
+
+      {/* Статус игры */}
+      <div className="text-center mb-3">
+        <p className="text-base theme-text-primary font-medium">{getStatusText()}</p>
+        <p className="text-sm theme-text-secondary mt-1">
+          Вы играете за: {gameState.playerColor === 'white' ? 'Белые' : 'Черные'}
+        </p>
+      </div>
+
+      {/* Кнопка новой игры */}
+      <div className="flex justify-center mb-3">
         <button
           onClick={resetGame}
-          className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+          className="theme-button-danger cursor-pointer px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105"
         >
           Новая игра
         </button>
       </div>
 
+      {/* Сообщение о завершении игры */}
       {gameState.status === 'finished' && (
-        <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-center text-blue-800 font-semibold">
+        <div className="mb-3 p-2 theme-bg-accent rounded-lg border theme-border-accent">
+          <p className="text-center theme-text-primary font-semibold text-sm">
             Игра завершена
           </p>
         </div>
       )}
 
-      <div className="mt-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">
-          История ходов ({gameState.moves.length}):
+      {/* История ходов */}
+      <div className="border-t theme-border-secondary pt-3">
+        <h3 className="text-sm font-semibold theme-text-primary mb-2 text-center">
+          История ходов ({gameState.moves.length})
         </h3>
-        <div className="max-h-32 overflow-y-auto bg-gray-50 rounded p-2">
+        <div className="max-h-24 overflow-y-auto theme-bg-secondary rounded p-2">
           {gameState.moves.length === 0 ? (
-            <p className="text-gray-400 text-sm">Ходы еще не сделаны</p>
+            <p className="text-center theme-text-muted text-xs">Ходы еще не сделаны</p>
           ) : (
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="space-y-1">
               {gameState.moves.map((move, index) => (
-                <span key={index} className="text-gray-700">
-                  {Math.floor(index / 2) + 1}. {move}
-                </span>
+                <div key={index} className="text-xs theme-text-primary text-center">
+                  {Math.floor(index / 2) + 1}.{index % 2 === 0 ? '' : '..'} {move}
+                </div>
               ))}
             </div>
           )}

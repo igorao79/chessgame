@@ -5,6 +5,8 @@ import { useGame } from '@/contexts/GameContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { GameMode, PlayerColor, Difficulty } from '@/types/game';
 import AuthModal from './AuthModal';
+import { GiChessKing } from 'react-icons/gi';
+import { FaRobot, FaUsers, FaGlobe, FaCircle, FaStar, FaPlay } from 'react-icons/fa';
 
 export default function GameModeSelector() {
   const { startGame } = useGame();
@@ -19,11 +21,12 @@ export default function GameModeSelector() {
   };
 
   return (
-    <div className="theme-bg-primary rounded-lg shadow-xl p-6 max-w-4xl mx-auto min-h-[600px]">
+    <div className="theme-bg-primary glassmorphism-selector rounded-xl shadow-xl p-6 max-w-4xl mx-auto min-h-[600px]">
       <div className="text-center mb-6">
-        <h1 className="inline-block theme-bg-accent theme-text-primary px-6 py-3 rounded-lg text-2xl font-bold shadow-md">
-          ♟️ Шахматы
-        </h1>
+        <div className="inline-flex items-center justify-center theme-bg-accent theme-text-primary px-6 py-3 rounded-lg text-2xl font-bold shadow-md gap-2">
+          <GiChessKing className="text-2xl flex-shrink-0" style={{ marginTop: '-6px' }} />
+          <span>Chessarao</span>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -37,13 +40,15 @@ export default function GameModeSelector() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <button
                 onClick={() => setSelectedMode('ai')}
-                className={`p-3 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
                   selectedMode === 'ai'
                     ? 'theme-border-accent theme-bg-accent shadow-md'
                     : 'theme-border-primary hover:theme-border-secondary'
                 }`}
               >
-                <div className="text-2xl mb-1">🤖</div>
+                <div className="flex justify-center mb-1">
+                  <FaRobot className="text-2xl" />
+                </div>
                 <div className="font-medium text-sm">Против ИИ</div>
                 <div className="text-xs theme-text-muted mt-1">
                   Играйте против компьютера
@@ -52,13 +57,15 @@ export default function GameModeSelector() {
 
               <button
                 onClick={() => setSelectedMode('local')}
-                className={`p-3 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
                   selectedMode === 'local'
                     ? 'theme-border-accent theme-bg-accent shadow-md'
                     : 'theme-border-primary hover:theme-border-secondary'
                 }`}
               >
-                <div className="text-2xl mb-1">👥</div>
+                <div className="flex justify-center mb-1">
+                  <FaUsers className="text-2xl" />
+                </div>
                 <div className="font-medium text-sm">Локальная игра</div>
                 <div className="text-xs theme-text-muted mt-1">
                   Играйте на одном устройстве
@@ -73,13 +80,15 @@ export default function GameModeSelector() {
                   }
                   setSelectedMode('online');
                 }}
-                className={`p-3 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
                   selectedMode === 'online'
                     ? 'theme-border-accent theme-bg-accent shadow-md'
                     : 'theme-border-primary hover:theme-border-secondary'
                 } ${!isAuthenticated ? 'opacity-75' : ''}`}
               >
-                <div className="text-2xl mb-1">🌐</div>
+                <div className="flex justify-center mb-1">
+                  <FaGlobe className="text-2xl" />
+                </div>
                 <div className="font-medium text-sm">
                   Онлайн игра
                   {!isAuthenticated && <span className="theme-button-danger ml-1">*</span>}
@@ -101,27 +110,31 @@ export default function GameModeSelector() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setSelectedColor('white')}
-                className={`p-3 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
                   selectedColor === 'white'
                     ? 'theme-border-accent theme-bg-accent shadow-md'
                     : 'theme-border-primary hover:theme-border-secondary'
                 }`}
                 disabled={selectedMode === 'online'}
               >
-                <div className="text-2xl mb-1">⚪</div>
+                <div className="flex justify-center mb-1">
+                  <FaCircle className="text-2xl text-white" />
+                </div>
                 <div className="font-medium text-sm">Белые</div>
               </button>
 
               <button
                 onClick={() => setSelectedColor('black')}
-                className={`p-3 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
                   selectedColor === 'black'
                     ? 'theme-border-accent theme-bg-accent shadow-md'
                     : 'theme-border-primary hover:theme-border-secondary'
                 }`}
                 disabled={selectedMode === 'online'}
               >
-                <div className="text-2xl mb-1">⚫</div>
+                <div className="flex justify-center mb-1">
+                  <FaCircle className="text-2xl text-black" />
+                </div>
                 <div className="font-medium text-sm">Черные</div>
               </button>
             </div>
@@ -137,7 +150,7 @@ export default function GameModeSelector() {
             <div className="grid grid-cols-3 gap-3">
               <button
                 onClick={() => setSelectedDifficulty('easy')}
-                className={`p-3 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
                   selectedDifficulty === 'easy'
                     ? 'theme-border-accent theme-bg-accent shadow-md'
                     : 'theme-border-primary hover:theme-border-secondary'
@@ -145,12 +158,14 @@ export default function GameModeSelector() {
                 disabled={selectedMode !== 'ai'}
               >
                 <div className="font-medium text-sm">Легко</div>
-                <div className="text-xs theme-text-muted mt-1">⭐</div>
+                <div className="text-xs theme-text-muted mt-1 flex gap-1 justify-center">
+                  <FaStar />
+                </div>
               </button>
 
               <button
                 onClick={() => setSelectedDifficulty('medium')}
-                className={`p-3 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
                   selectedDifficulty === 'medium'
                     ? 'theme-border-accent theme-bg-accent shadow-md'
                     : 'theme-border-primary hover:theme-border-secondary'
@@ -158,12 +173,15 @@ export default function GameModeSelector() {
                 disabled={selectedMode !== 'ai'}
               >
                 <div className="font-medium text-sm">Средне</div>
-                <div className="text-xs theme-text-muted mt-1">⭐⭐</div>
+                <div className="text-xs theme-text-muted mt-1 flex gap-1 justify-center">
+                  <FaStar />
+                  <FaStar />
+                </div>
               </button>
 
               <button
                 onClick={() => setSelectedDifficulty('hard')}
-                className={`p-3 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
                   selectedDifficulty === 'hard'
                     ? 'theme-border-accent theme-bg-accent shadow-md'
                     : 'theme-border-primary hover:theme-border-secondary'
@@ -171,7 +189,11 @@ export default function GameModeSelector() {
                 disabled={selectedMode !== 'ai'}
               >
                 <div className="font-medium text-sm">Сложно</div>
-                <div className="text-xs theme-text-muted mt-1">⭐⭐⭐</div>
+                <div className="text-xs theme-text-muted mt-1 flex gap-1 justify-center">
+                  <FaStar />
+                  <FaStar />
+                  <FaStar />
+                </div>
               </button>
             </div>
           </div>
@@ -181,9 +203,12 @@ export default function GameModeSelector() {
           {/* Кнопка начала игры и предупреждения */}
           <button
             onClick={handleStartGame}
-            className="w-full theme-button-primary font-bold py-3 px-4 rounded-lg text-lg transition-colors shadow-md hover:shadow-lg"
+            className="w-full theme-button-primary font-bold py-3 px-4 rounded-lg text-lg transition-colors shadow-md hover:shadow-lg cursor-pointer"
           >
-            🎮 Начать игру
+            <div className="flex items-center justify-center gap-2">
+              <FaPlay className="text-lg" />
+              <span>Начать игру</span>
+            </div>
           </button>
 
           {selectedMode === 'online' && (

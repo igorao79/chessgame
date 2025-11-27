@@ -8,7 +8,7 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-lg theme-bg-tertiary theme-border-primary border hover:theme-bg-accent transition-colors"
+      className="p-2 rounded-lg theme-bg-tertiary theme-border-primary border hover:theme-bg-accent transition-colors cursor-pointer"
       title={`Переключить на ${theme === 'light' ? 'темную' : 'светлую'} тему`}
     >
       {theme === 'light' ? (

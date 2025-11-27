@@ -5,6 +5,7 @@ import { GameProvider } from "@/contexts/GameContext";
 import { SocketProvider } from "@/contexts/SocketContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { PieceThemeProvider } from "@/contexts/PieceThemeContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Шахматы - Играйте онлайн или против ИИ",
+  title: "Chessarao - Играйте онлайн или против ИИ",
   description: "Шахматная игра с возможностью игры против искусственного интеллекта, локально или онлайн с друзьями",
 };
 
@@ -35,7 +36,9 @@ export default function RootLayout({
           <AuthProvider>
             <SocketProvider>
               <GameProvider>
-                {children}
+                <PieceThemeProvider>
+                  {children}
+                </PieceThemeProvider>
               </GameProvider>
             </SocketProvider>
           </AuthProvider>

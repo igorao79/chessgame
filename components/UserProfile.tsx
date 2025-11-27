@@ -43,13 +43,13 @@ export default function UserProfile() {
         <div className="flex items-center space-x-2">
           <button
             onClick={handleLogin}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
           >
             Войти
           </button>
           <button
             onClick={handleRegister}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors cursor-pointer"
           >
             Регистрация
           </button>
@@ -66,7 +66,7 @@ export default function UserProfile() {
 
   return (
     <div className="flex items-center space-x-4">
-      {/* Переключатель темы */}
+      {/* Переключатель темы интерфейса */}
       <ThemeToggle />
 
       {/* Аватар пользователя */}
@@ -87,7 +87,7 @@ export default function UserProfile() {
       {/* Кнопка выхода */}
       <button
         onClick={handleLogout}
-        className="px-3 py-1 text-sm theme-button-danger rounded transition-colors"
+        className="px-3 py-1 text-sm theme-button-danger rounded transition-colors cursor-pointer"
       >
         Выйти
       </button>

@@ -98,10 +98,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (!chess || !gameState) return false;
 
       try {
+        // Проверяем, требуется ли превращение пешки
+        const piece = chess.get(move.from);
+        const isPawnPromotion = piece && piece.type === 'p' &&
+          ((piece.color === 'w' && move.to[1] === '8') ||
+           (piece.color === 'b' && move.to[1] === '1'));
+
         const result = chess.move({
           from: move.from,
           to: move.to,
-          promotion: move.promotion || 'q',
+          promotion: isPawnPromotion ? (move.promotion || 'q') : undefined,
         });
 
         if (result) {

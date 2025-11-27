@@ -16,11 +16,11 @@ export default function ChessBoard() {
   const { gameState, chess, makeMove, isPlayerTurn } = useGame();
   const boardRef = useRef<HTMLDivElement>(null);
   const chessboardRef = useRef<any>(null);
-  const [highlightedSquares, setHighlightedSquares] = useState<string[]>([]);
 
   // Получить возможные ходы для выбранной фигуры
   const getPossibleMoves = (from: string): string[] => {
     if (!chess) return [];
+
     try {
       const moves = chess.moves({ square: from as any, verbose: true });
       return moves.map(move => move.to).filter(to => to !== null) as string[];
@@ -31,8 +31,6 @@ export default function ChessBoard() {
 
   // Подсветить квадраты
   const highlightSquares = (squares: string[]) => {
-    setHighlightedSquares(squares);
-
     if (!chessboardRef.current || !boardRef.current) return;
 
     // Очищаем старую подсветку
@@ -47,7 +45,6 @@ export default function ChessBoard() {
 
   // Очистить подсветку
   const clearHighlights = () => {
-    setHighlightedSquares([]);
     if (boardRef.current) {
       const $board = window.$(`#${boardRef.current.id}`);
       $board.find('.square-55d63').removeClass('highlight-square');
@@ -65,7 +62,6 @@ export default function ChessBoard() {
         const jqueryScript = document.createElement('script');
         jqueryScript.src = 'https://code.jquery.com/jquery-3.7.1.min.js';
         document.head.appendChild(jqueryScript);
-
         await new Promise(resolve => {
           jqueryScript.onload = resolve;
         });
@@ -85,21 +81,10 @@ export default function ChessBoard() {
         const chessboardScript = document.createElement('script');
         chessboardScript.src = 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js';
         document.head.appendChild(chessboardScript);
-
         await new Promise(resolve => {
           chessboardScript.onload = resolve;
         });
       }
-
-      // Проверяем доступность изображений
-      const testImageUrl = (url: string) => {
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.onload = () => resolve(true);
-          img.onerror = () => resolve(false);
-          img.src = url;
-        });
-      };
     };
 
     loadScripts().then(() => {
@@ -174,18 +159,17 @@ export default function ChessBoard() {
           console.log('🏁 Snap end - position updated');
         },
 
-        // Альтернативные источники изображений
-        pieceTheme: (piece: string) => {
-          // Список источников изображений (пробуем по порядку)
+        // Тема фигур - используем несколько источников с fallback
+        pieceTheme: function(piece) {
+          // Пробуем несколько источников
           const sources = [
-            'https://chessboardjs.com/img/chesspieces/alpha/{piece}.png',
-            'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/{piece}.png',
-            'https://www.chess.com/chess-themes/pieces/neo/150/{piece}.png',
-            'https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/alpha/{piece}.png'
+            'https://chessboardjs.com/img/chesspieces/wikipedia/' + piece + '.png',
+            'https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/merida/' + piece + '.png',
+            'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/' + piece + '.png',
+            'https://chessboardjs.com/img/chesspieces/alpha/' + piece + '.png'
           ];
-
-          // Возвращаем первый источник
-          return sources[0].replace('{piece}', piece);
+          // Возвращаем первый источник (ChessBoard.js попробует остальные при ошибке)
+          return sources[0];
         }
       };
 
@@ -205,6 +189,21 @@ export default function ChessBoard() {
 
           .square-55d63:hover {
             background-color: rgba(255, 255, 0, 0.2) !important;
+          }
+
+          /* Убираем overflow: hidden чтобы фигуры не обрезались при перетаскивании */
+          .board-b72b1,
+          .board-b72b1 * {
+            overflow: visible !important;
+          }
+
+          /* Дополнительные селекторы для ChessBoard.js */
+          [class*="board-"] {
+            overflow: visible !important;
+          }
+
+          [class*="board-"] * {
+            overflow: visible !important;
           }
         `;
         document.head.appendChild(style);
@@ -250,17 +249,10 @@ export default function ChessBoard() {
           width: '100%',
           borderRadius: '8px',
           boxShadow: '0 5px 15px rgba(0, 0, 0, 0.5)',
-          overflow: 'hidden'
+          zIndex: 20,
+          position: 'relative'
         }}
       />
-
-      {/* Отладочная информация */}
-      {highlightedSquares.length > 0 && (
-        <div className="mt-2 text-sm text-gray-600 text-center">
-          Подсвечены: {highlightedSquares.join(', ')}
-        </div>
-      )}
     </div>
   );
 }
-  
