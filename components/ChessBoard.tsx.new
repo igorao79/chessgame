@@ -22,8 +22,8 @@ export default function ChessBoard() {
   const getPossibleMoves = (from: string): string[] => {
     if (!chess) return [];
     try {
-      const moves = chess.moves({ square: from as any, verbose: true });
-      return moves.map(move => move.to).filter(to => to !== null) as string[];
+      const moves = chess.moves({ square: from, verbose: true });
+      return moves.map(move => move.to).filter(to => to !== null);
     } catch {
       return [];
     }
@@ -92,7 +92,7 @@ export default function ChessBoard() {
       }
 
       // Проверяем доступность изображений
-      const testImageUrl = (url: string) => {
+      const testImageUrl = (url) => {
         return new Promise((resolve) => {
           const img = new Image();
           img.onload = () => resolve(true);
@@ -175,7 +175,7 @@ export default function ChessBoard() {
         },
 
         // Альтернативные источники изображений
-        pieceTheme: (piece: string) => {
+        pieceTheme: (piece) => {
           // Список источников изображений (пробуем по порядку)
           const sources = [
             'https://chessboardjs.com/img/chesspieces/alpha/{piece}.png',

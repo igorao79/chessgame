@@ -1,9 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSocket } from '@/contexts/SocketContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Chess, Square } from 'chess.js';
-import { Chessboard } from 'react-chessboard';
+import { useSounds } from '@/lib/sounds';
+
+// ChessBoard.js globals
+declare global {
+  interface Window {
+    $: any;
+    jQuery: any;
+    Chessboard: any;
+  }
+}
 
 interface JoinRoomResponse {
   error?: string;
@@ -13,6 +23,7 @@ interface JoinRoomResponse {
 
 export default function OnlineGame() {
   const { socket, isConnected } = useSocket();
+  const { playTurn, playWin, playFail } = useSounds();
   const [roomId, setRoomId] = useState<string>('');
   const [inputRoomId, setInputRoomId] = useState<string>('');
   const [gameStarted, setGameStarted] = useState(false);
@@ -21,6 +32,83 @@ export default function OnlineGame() {
   const [fen, setFen] = useState(chess.fen());
   const [gameStatus, setGameStatus] = useState<string>('');
   const [moveFrom, setMoveFrom] = useState<string | null>(null);
+  
+  // ChessBoard.js refs
+  const boardRef = useRef<HTMLDivElement>(null);
+  const chessboardRef = useRef<any>(null);
+
+  // Инициализация ChessBoard.js для онлайн игры
+  useEffect(() => {
+    if (!boardRef.current || !gameStarted) return;
+
+    const loadAndInitBoard = async () => {
+      // Загружаем jQuery и ChessBoard.js
+      if (!window.$) {
+        const jqueryScript = document.createElement('script');
+        jqueryScript.src = 'https://code.jquery.com/jquery-3.7.1.min.js';
+        document.head.appendChild(jqueryScript);
+        await new Promise(resolve => { jqueryScript.onload = resolve; });
+      }
+
+      if (!document.querySelector('#chessboard-css')) {
+        const cssLink = document.createElement('link');
+        cssLink.id = 'chessboard-css';
+        cssLink.rel = 'stylesheet';
+        cssLink.href = 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css';
+        document.head.appendChild(cssLink);
+      }
+
+      if (!window.Chessboard) {
+        const chessboardScript = document.createElement('script');
+        chessboardScript.src = 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js';
+        document.head.appendChild(chessboardScript);
+        await new Promise(resolve => { chessboardScript.onload = resolve; });
+      }
+
+      // Создаем доску
+      const config = {
+        position: fen,
+        orientation: playerColor,
+        draggable: true,
+        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+        
+        onDragStart: (source: string, piece: string) => {
+          const currentTurn = chess.turn();
+          const isPlayerTurn = (currentTurn === 'w' && playerColor === 'white') || 
+                               (currentTurn === 'b' && playerColor === 'black');
+          
+          if (!isPlayerTurn) return false;
+          
+          const pieceColor = piece.charAt(0);
+          const isPlayerPiece = (playerColor === 'white' && pieceColor === 'w') || 
+                               (playerColor === 'black' && pieceColor === 'b');
+          
+          return isPlayerPiece;
+        },
+        
+        onDrop: (source: string, target: string) => {
+          const success = makeMove(source, target);
+          return success ? null : 'snapback';
+        },
+        
+        onSnapEnd: () => {
+          if (chessboardRef.current) {
+            chessboardRef.current.position(chess.fen());
+          }
+        }
+      };
+
+      chessboardRef.current = window.Chessboard(boardRef.current, config);
+    };
+
+    loadAndInitBoard();
+
+    return () => {
+      if (chessboardRef.current?.destroy) {
+        chessboardRef.current.destroy();
+      }
+    };
+  }, [gameStarted, fen]);
 
   useEffect(() => {
     if (!socket) return;
@@ -29,18 +117,42 @@ export default function OnlineGame() {
       setRoomId(roomId);
       setPlayerColor(color);
       setGameStarted(true);
-      setGameStatus(`Игра началась! Вы играете за ${color === 'white' ? 'белых' : 'черных'}`);
+      setGameStatus(`${user?.name || 'Игрок'} - игра началась! Вы играете за ${color === 'white' ? 'белых' : 'черных'}`);
     });
 
     socket.on('opponent-move', ({ move, fen: newFen }) => {
       chess.load(newFen);
       setFen(chess.fen());
       setGameStatus(`Ход соперника: ${move}`);
+      console.log(`${user?.name || 'Игрок'} - соперник сделал ход: ${move}`);
+
+      // Воспроизводим звук хода противника
+      playTurn();
+
+      // Обновляем позицию на ChessBoard.js доске
+      if (chessboardRef.current) {
+        chessboardRef.current.position(newFen);
+      }
     });
 
     socket.on('opponent-disconnected', () => {
       setGameStatus('Соперник отключился');
       setGameStarted(false);
+    });
+
+    socket.on('game-over', ({ winner }) => {
+      // Воспроизводим звуки когда игра заканчивается от сервера
+      setTimeout(() => {
+        if (winner === 'draw') {
+          console.log('🤝 Ничья!');
+        } else if (winner === playerColor) {
+          playWin();
+        } else {
+          playFail();
+        }
+      }, 500);
+      
+      setGameStatus(`Игра завершена! ${winner === 'draw' ? 'Ничья' : winner === playerColor ? 'Вы победили!' : 'Вы проиграли!'}`);
     });
 
     socket.on('game-ended', ({ winner }) => {
@@ -51,6 +163,7 @@ export default function OnlineGame() {
       socket.off('game-start');
       socket.off('opponent-move');
       socket.off('opponent-disconnected');
+      socket.off('game-over');
       socket.off('game-ended');
     };
   }, [socket, chess]);
@@ -93,6 +206,14 @@ export default function OnlineGame() {
         const newFen = chess.fen();
         setFen(newFen);
 
+        // Воспроизводим звук собственного хода
+        playTurn();
+
+        // Обновляем позицию на ChessBoard.js доске
+        if (chessboardRef.current) {
+          chessboardRef.current.position(newFen);
+        }
+
         if (socket && roomId) {
           socket.emit('move', { roomId, move: move.san, fen: newFen });
         }
@@ -101,6 +222,17 @@ export default function OnlineGame() {
           const winner = chess.isCheckmate() 
             ? (chess.turn() === 'w' ? 'black' : 'white')
             : 'draw';
+          
+          // Воспроизводим звуки победы/поражения
+          setTimeout(() => {
+            if (winner === 'draw') {
+              console.log('🤝 Ничья в онлайн игре!');
+            } else if (winner === playerColor) {
+              playWin();
+            } else {
+              playFail();
+            }
+          }, 500);
           
           if (socket && roomId) {
             socket.emit('game-over', { roomId, winner });
@@ -245,31 +377,14 @@ export default function OnlineGame() {
       </div>
 
       <div className="w-full max-w-[600px] mx-auto">
-        <Chessboard
-          options={{
-            position: fen,
-            boardOrientation: playerColor,
-            onPieceDrop: ({ sourceSquare, targetSquare }) => {
-              if (!sourceSquare || !targetSquare) return false;
-              return makeMove(sourceSquare, targetSquare);
-            },
-            onSquareClick: ({ square }) => {
-              if (!square) return;
-              
-              if (!moveFrom) {
-                const piece = chess.get(square as Square);
-                if (piece && piece.color === chess.turn()) {
-                  setMoveFrom(square);
-                }
-              } else {
-                makeMove(moveFrom, square);
-                setMoveFrom(null);
-              }
-            },
-            boardStyle: {
-              borderRadius: '8px',
-              boxShadow: '0 5px 15px rgba(0, 0, 0, 0.5)',
-            },
+        <div 
+          ref={boardRef}
+          id={`online-chessboard-${roomId || 'waiting'}`}
+          style={{ 
+            width: '100%',
+            borderRadius: '8px',
+            boxShadow: '0 5px 15px rgba(0, 0, 0, 0.5)',
+            overflow: 'hidden'
           }}
         />
       </div>

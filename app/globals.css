@@ -1,26 +1,125 @@
 @import "tailwindcss";
 
+/* Светлая тема (по умолчанию) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --bg-accent: #e2e8f0;
+
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-accent: #0f172a;
+
+  --border-primary: #e2e8f0;
+  --border-secondary: #cbd5e1;
+  --border-accent: #94a3b8;
+
+  --button-primary: #3b82f6;
+  --button-primary-hover: #2563eb;
+  --button-secondary: #64748b;
+  --button-secondary-hover: #475569;
+  --button-success: #10b981;
+  --button-success-hover: #059669;
+  --button-danger: #ef4444;
+  --button-danger-hover: #dc2626;
+
+  --chess-board-light: #f0d9b5;
+  --chess-board-dark: #b58863;
+  --chess-highlight: rgba(59, 130, 246, 0.4);
+  --chess-possible-move: rgba(16, 185, 129, 0.4);
+}
+
+/* Темная тема */
+[data-theme="dark"] {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-accent: #475569;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-accent: #e2e8f0;
+
+  --border-primary: #334155;
+  --border-secondary: #475569;
+  --border-accent: #64748b;
+
+  --button-primary: #3b82f6;
+  --button-primary-hover: #60a5fa;
+  --button-secondary: #64748b;
+  --button-secondary-hover: #94a3b8;
+  --button-success: #10b981;
+  --button-success-hover: #34d399;
+  --button-danger: #ef4444;
+  --button-danger-hover: #f87171;
+
+  --chess-board-light: #f0d9b5;
+  --chess-board-dark: #b58863;
+  --chess-highlight: rgba(59, 130, 246, 0.4);
+  --chess-possible-move: rgba(16, 185, 129, 0.4);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Компоненты с темами */
+.theme-bg-primary { background-color: var(--bg-primary); }
+.theme-bg-secondary { background-color: var(--bg-secondary); }
+.theme-bg-tertiary { background-color: var(--bg-tertiary); }
+.theme-bg-accent { background-color: var(--bg-accent); }
+
+.theme-text-primary { color: var(--text-primary); }
+.theme-text-secondary { color: var(--text-secondary); }
+.theme-text-muted { color: var(--text-muted); }
+.theme-text-accent { color: var(--text-accent); }
+
+.theme-border-primary { border-color: var(--border-primary); }
+.theme-border-secondary { border-color: var(--border-secondary); }
+.theme-border-accent { border-color: var(--border-accent); }
+
+.theme-button-primary {
+  background-color: var(--button-primary);
+  color: white;
+}
+.theme-button-primary:hover {
+  background-color: var(--button-primary-hover);
+}
+
+.theme-button-secondary {
+  background-color: var(--button-secondary);
+  color: white;
+}
+.theme-button-secondary:hover {
+  background-color: var(--button-secondary-hover);
+}
+
+.theme-button-success {
+  background-color: var(--button-success);
+  color: white;
+}
+.theme-button-success:hover {
+  background-color: var(--button-success-hover);
+}
+
+.theme-button-danger {
+  background-color: var(--button-danger);
+  color: white;
+}
+.theme-button-danger:hover {
+  background-color: var(--button-danger-hover);
 }

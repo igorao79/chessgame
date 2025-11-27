@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 import { Chess } from 'chess.js';
 import { GameState, GameMode, PlayerColor, Difficulty, Move } from '@/types/game';
 import { getBestMove } from '@/lib/chess-ai';
+import { useSounds } from '@/lib/sounds';
 
 interface GameContextType {
   gameState: GameState | null;
@@ -19,15 +20,19 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 export function GameProvider({ children }: { children: ReactNode }) {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [chess, setChess] = useState<Chess | null>(null);
+  const { playTurn, playWin, playFail } = useSounds();
 
   const makeAIMove = useCallback((chessInstance: Chess, state: GameState) => {
     const bestMove = getBestMove(chessInstance.fen(), state.difficulty);
     if (bestMove) {
       const result = chessInstance.move(bestMove);
       if (result) {
+        // Воспроизводим звук хода ИИ
+        playTurn();
+
         setGameState((prev) => {
           if (!prev) return prev;
-          return {
+          const newState = {
             ...prev,
             fen: chessInstance.fen(),
             moves: [...prev.moves, bestMove],
@@ -41,10 +46,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
               ? 'draw'
               : undefined,
           };
+
+          // Воспроизводим звуки победы/поражения для хода ИИ
+          if (newState.status === 'finished') {
+            setTimeout(() => {
+              if (newState.winner === 'draw') {
+                console.log('🤝 Ничья!');
+              } else if (newState.winner === prev.playerColor) {
+                playWin();
+              } else {
+                playFail();
+              }
+            }, 500);
+          }
+
+          return newState;
         });
       }
     }
-  }, []);
+  }, [playTurn, playWin, playFail]);
 
   const startGame = useCallback(
     (mode: GameMode, playerColor: PlayerColor = 'white', difficulty: Difficulty = 'medium') => {
@@ -85,6 +105,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         });
 
         if (result) {
+          // Воспроизводим звук хода
+          playTurn();
+
           const newGameState: GameState = {
             ...gameState,
             fen: chess.fen(),
@@ -101,6 +124,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
           };
 
           setGameState(newGameState);
+
+          // Воспроизводим звуки победы/поражения
+          if (newGameState.status === 'finished') {
+            if (newGameState.winner === 'draw') {
+              // При ничьей можем играть нейтральный звук или тишину
+              console.log('🤝 Ничья!');
+            } else if (newGameState.winner === gameState.playerColor) {
+              // Игрок победил
+              setTimeout(() => playWin(), 500);
+            } else {
+              // Игрок проиграл
+              setTimeout(() => playFail(), 500);
+            }
+          }
 
           // Если игра против AI и не конец игры, делаем ход AI
           if (
@@ -121,7 +158,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       return false;
     },
-    [chess, gameState, makeAIMove]
+    [chess, gameState, makeAIMove, playTurn, playWin, playFail]
   );
 
   const resetGame = useCallback(() => {

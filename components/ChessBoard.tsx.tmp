@@ -1,9 +1,9 @@
-п»ї'use client';
+'use client';
 
 import { useGame } from '@/contexts/GameContext';
 import { useEffect, useRef, useState } from 'react';
 
-// РРјРїРѕСЂС‚РёСЂСѓРµРј ChessBoard.js Рё jQuery
+// Импортируем ChessBoard.js и jQuery
 declare global {
   interface Window {
     $: any;
@@ -18,34 +18,34 @@ export default function ChessBoard() {
   const chessboardRef = useRef<any>(null);
   const [highlightedSquares, setHighlightedSquares] = useState<string[]>([]);
 
-  // РџРѕР»СѓС‡РёС‚СЊ РІРѕР·РјРѕР¶РЅС‹Рµ С…РѕРґС‹ РґР»СЏ РІС‹Р±СЂР°РЅРЅРѕР№ С„РёРіСѓСЂС‹
+  // Получить возможные ходы для выбранной фигуры
   const getPossibleMoves = (from: string): string[] => {
     if (!chess) return [];
     try {
-      const moves = chess.moves({ square: from as any, verbose: true });
-      return moves.map(move => move.to).filter(to => to !== null) as string[];
+      const moves = chess.moves({ square: from, verbose: true });
+      return moves.map(move => move.to).filter(to => to !== null);
     } catch {
       return [];
     }
   };
 
-  // РџРѕРґСЃРІРµС‚РёС‚СЊ РєРІР°РґСЂР°С‚С‹
+  // Подсветить квадраты
   const highlightSquares = (squares: string[]) => {
     setHighlightedSquares(squares);
 
     if (!chessboardRef.current || !boardRef.current) return;
 
-    // РћС‡РёС‰Р°РµРј СЃС‚Р°СЂСѓСЋ РїРѕРґСЃРІРµС‚РєСѓ
+    // Очищаем старую подсветку
     const $board = window.$(`#${boardRef.current.id}`);
     $board.find('.square-55d63').removeClass('highlight-square');
 
-    // Р”РѕР±Р°РІР»СЏРµРј РЅРѕРІСѓСЋ РїРѕРґСЃРІРµС‚РєСѓ
+    // Добавляем новую подсветку
     squares.forEach(square => {
       $board.find(`.square-${square}`).addClass('highlight-square');
     });
   };
 
-  // РћС‡РёСЃС‚РёС‚СЊ РїРѕРґСЃРІРµС‚РєСѓ
+  // Очистить подсветку
   const clearHighlights = () => {
     setHighlightedSquares([]);
     if (boardRef.current) {
@@ -54,11 +54,11 @@ export default function ChessBoard() {
     }
   };
 
-  // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РґРѕСЃРєРё
+  // Инициализация доски
   useEffect(() => {
     if (!boardRef.current || !gameState || !chess) return;
 
-    // РџРѕРґРєР»СЋС‡Р°РµРј jQuery Рё ChessBoard.js
+    // Подключаем jQuery и ChessBoard.js
     const loadScripts = async () => {
       // jQuery
       if (!window.$) {
@@ -91,8 +91,8 @@ export default function ChessBoard() {
         });
       }
 
-      // РџСЂРѕРІРµСЂСЏРµРј РґРѕСЃС‚СѓРїРЅРѕСЃС‚СЊ РёР·РѕР±СЂР°Р¶РµРЅРёР№
-      const testImageUrl = (url: string) => {
+      // Проверяем доступность изображений
+      const testImageUrl = (url) => {
         return new Promise((resolve) => {
           const img = new Image();
           img.onload = () => resolve(true);
@@ -105,19 +105,19 @@ export default function ChessBoard() {
     loadScripts().then(() => {
       if (!window.Chessboard || !boardRef.current) return;
 
-      // РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ РґРѕСЃРєРё
+      // Конфигурация доски
       const config = {
         position: gameState.fen,
         orientation: gameState.playerColor === 'white' ? 'white' : 'black',
         draggable: true,
         dropOffBoard: 'snapback',
 
-        // РќР°С‡Р°Р»Рѕ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ - РїРѕРєР°Р·С‹РІР°РµРј РІРѕР·РјРѕР¶РЅС‹Рµ С…РѕРґС‹
+        // Начало перетаскивания - показываем возможные ходы
         onDragStart: (source: string, piece: string) => {
-          // РџСЂРѕРІРµСЂСЏРµРј РѕС‡РµСЂРµРґСЊ С…РѕРґР°
+          // Проверяем очередь хода
           if (!isPlayerTurn()) return false;
 
-          // РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ С„РёРіСѓСЂР° РїСЂРёРЅР°РґР»РµР¶РёС‚ РёРіСЂРѕРєСѓ
+          // Проверяем, что фигура принадлежит игроку
           const playerColor = gameState.playerColor;
           const pieceColor = piece.charAt(0);
           const isPlayerPiece = (playerColor === 'white' && pieceColor === 'w') ||
@@ -125,58 +125,58 @@ export default function ChessBoard() {
 
           if (!isPlayerPiece) return false;
 
-          // РџРѕРєР°Р·С‹РІР°РµРј РІРѕР·РјРѕР¶РЅС‹Рµ С…РѕРґС‹
+          // Показываем возможные ходы
           const moves = getPossibleMoves(source);
           highlightSquares([source, ...moves]);
 
-          console.log('рџџЎ Drag start:', source, 'Possible moves:', moves);
+          console.log('?? Drag start:', source, 'Possible moves:', moves);
           return true;
         },
 
-        // Р’Рѕ РІСЂРµРјСЏ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ - РїРѕРґРґРµСЂР¶РёРІР°РµРј РїРѕРґСЃРІРµС‚РєСѓ
+        // Во время перетаскивания - поддерживаем подсветку
         onDragMove: (newLocation: string, oldLocation: string, source: string) => {
-          // РџРѕРґСЃРІРµС‚РєР° РѕСЃС‚Р°РµС‚СЃСЏ Р°РєС‚РёРІРЅРѕР№ РІРѕ РІСЂРµРјСЏ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ
-          console.log('рџ”„ Dragging...', source);
+          // Подсветка остается активной во время перетаскивания
+          console.log('?? Dragging...', source);
         },
 
-        // РћС‚РїСѓСЃРєР°РЅРёРµ С„РёРіСѓСЂС‹ - РїСЂРѕРІРµСЂСЏРµРј Рё РІС‹РїРѕР»РЅСЏРµРј С…РѕРґ
+        // Отпускание фигуры - проверяем и выполняем ход
         onDrop: (source: string, target: string, piece: string) => {
-          console.log('рџЋЇ Drop attempt:', source, 'to', target);
+          console.log('?? Drop attempt:', source, 'to', target);
 
-          // РћС‡РёС‰Р°РµРј РїРѕРґСЃРІРµС‚РєСѓ
+          // Очищаем подсветку
           clearHighlights();
 
-          // РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ С…РѕРґ РІРѕР·РјРѕР¶РµРЅ
+          // Проверяем, что ход возможен
           const possibleMoves = getPossibleMoves(source);
           if (!possibleMoves.includes(target)) {
-            console.log('вќЊ Invalid move:', source, 'to', target);
+            console.log('? Invalid move:', source, 'to', target);
             return 'snapback';
           }
 
-          // Р’С‹РїРѕР»РЅСЏРµРј С…РѕРґ
+          // Выполняем ход
           const success = makeMove({
             from: source,
             to: target,
           });
 
-          console.log('вњ… Move result:', success);
+          console.log('? Move result:', success);
 
-          // Р•СЃР»Рё С…РѕРґ РЅРµ РІС‹РїРѕР»РЅРёР»СЃСЏ, РІРѕР·РІСЂР°С‰Р°РµРј С„РёРіСѓСЂСѓ РѕР±СЂР°С‚РЅРѕ
+          // Если ход не выполнился, возвращаем фигуру обратно
           return success ? null : 'snapback';
         },
 
-        // РџРѕСЃР»Рµ Р·Р°РІРµСЂС€РµРЅРёСЏ Р°РЅРёРјР°С†РёРё
+        // После завершения анимации
         onSnapEnd: () => {
-          // РћР±РЅРѕРІР»СЏРµРј РїРѕР·РёС†РёСЋ РЅР° РґРѕСЃРєРµ
+          // Обновляем позицию на доске
           if (chessboardRef.current && chess) {
             chessboardRef.current.position(chess.fen());
           }
-          console.log('рџЏЃ Snap end - position updated');
+          console.log('?? Snap end - position updated');
         },
 
-        // РђР»СЊС‚РµСЂРЅР°С‚РёРІРЅС‹Рµ РёСЃС‚РѕС‡РЅРёРєРё РёР·РѕР±СЂР°Р¶РµРЅРёР№
-        pieceTheme: (piece: string) => {
-          // РЎРїРёСЃРѕРє РёСЃС‚РѕС‡РЅРёРєРѕРІ РёР·РѕР±СЂР°Р¶РµРЅРёР№ (РїСЂРѕР±СѓРµРј РїРѕ РїРѕСЂСЏРґРєСѓ)
+        // Альтернативные источники изображений
+        pieceTheme: (piece) => {
+          // Список источников изображений (пробуем по порядку)
           const sources = [
             'https://chessboardjs.com/img/chesspieces/alpha/{piece}.png',
             'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/{piece}.png',
@@ -184,15 +184,15 @@ export default function ChessBoard() {
             'https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/alpha/{piece}.png'
           ];
 
-          // Р’РѕР·РІСЂР°С‰Р°РµРј РїРµСЂРІС‹Р№ РёСЃС‚РѕС‡РЅРёРє
+          // Возвращаем первый источник
           return sources[0].replace('{piece}', piece);
         }
       };
 
-      // РЎРѕР·РґР°РµРј РґРѕСЃРєСѓ
+      // Создаем доску
       chessboardRef.current = window.Chessboard(boardRef.current, config);
 
-      // Р”РѕР±Р°РІР»СЏРµРј РєР°СЃС‚РѕРјРЅС‹Рµ СЃС‚РёР»Рё РґР»СЏ РїРѕРґСЃРІРµС‚РєРё
+      // Добавляем кастомные стили для подсветки
       if (!document.querySelector('#chess-highlight-styles')) {
         const style = document.createElement('style');
         style.id = 'chess-highlight-styles';
@@ -210,24 +210,24 @@ export default function ChessBoard() {
         document.head.appendChild(style);
       }
 
-      console.log('в™џпёЏ ChessBoard.js initialized successfully');
+      console.log('?? ChessBoard.js initialized successfully');
     });
 
     // Cleanup
     return () => {
       if (chessboardRef.current && chessboardRef.current.destroy) {
         chessboardRef.current.destroy();
-        console.log('рџ§№ ChessBoard destroyed');
+        console.log('?? ChessBoard destroyed');
       }
     };
   }, [gameState?.id]);
 
-  // РћР±РЅРѕРІР»СЏРµРј РїРѕР·РёС†РёСЋ РєРѕРіРґР° РјРµРЅСЏРµС‚СЃСЏ FEN
+  // Обновляем позицию когда меняется FEN
   useEffect(() => {
     if (chessboardRef.current && gameState) {
       chessboardRef.current.position(gameState.fen);
-      clearHighlights(); // РћС‡РёС‰Р°РµРј РїРѕРґСЃРІРµС‚РєСѓ РїСЂРё РѕР±РЅРѕРІР»РµРЅРёРё РїРѕР·РёС†РёРё
-      console.log('рџ”„ Position updated:', gameState.fen);
+      clearHighlights(); // Очищаем подсветку при обновлении позиции
+      console.log('?? Position updated:', gameState.fen);
     }
   }, [gameState?.fen]);
 
@@ -235,7 +235,7 @@ export default function ChessBoard() {
     return (
       <div className="w-full max-w-[600px] mx-auto">
         <div className="bg-gray-200 rounded-lg p-8 text-center">
-          <p className="text-gray-600">Р—Р°РіСЂСѓР·РєР° С€Р°С…РјР°С‚РЅРѕР№ РґРѕСЃРєРё...</p>
+          <p className="text-gray-600">Загрузка шахматной доски...</p>
         </div>
       </div>
     );
@@ -254,13 +254,12 @@ export default function ChessBoard() {
         }}
       />
 
-      {/* РћС‚Р»Р°РґРѕС‡РЅР°СЏ РёРЅС„РѕСЂРјР°С†РёСЏ */}
+      {/* Отладочная информация */}
       {highlightedSquares.length > 0 && (
         <div className="mt-2 text-sm text-gray-600 text-center">
-          РџРѕРґСЃРІРµС‡РµРЅС‹: {highlightedSquares.join(', ')}
+          Подсвечены: {highlightedSquares.join(', ')}
         </div>
       )}
     </div>
   );
 }
-  
