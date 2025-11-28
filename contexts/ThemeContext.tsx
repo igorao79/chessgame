@@ -47,7 +47,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Предотвращаем hydration mismatch
   if (!mounted) {
-    return <>{children}</>;
+    return (
+      <div className="min-h-screen bg-white text-gray-900">
+        {children}
+      </div>
+    );
   }
 
   return (

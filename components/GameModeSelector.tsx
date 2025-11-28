@@ -91,7 +91,6 @@ export default function GameModeSelector() {
                 </div>
                 <div className="font-medium text-sm">
                   Онлайн игра
-                  {!isAuthenticated && <span className="theme-button-danger ml-1">*</span>}
                 </div>
                 <div className="text-xs theme-text-muted mt-1">
                   {isAuthenticated ? 'Играйте по сети' : 'Требуется авторизация'}
@@ -200,7 +199,30 @@ export default function GameModeSelector() {
         </div>
 
         <div className="flex-1 min-h-[160px] flex flex-col justify-center">
-          {/* Кнопка начала игры и предупреждения */}
+          {/* Место для предупреждения о регистрации */}
+          <div className="mb-3 min-h-[72px]">
+            {!isAuthenticated && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <div className="flex-shrink-0 w-4 h-4 mt-0.5">
+                    <svg className="w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-800">
+                      Онлайн игра доступна только зарегистрированным пользователям
+                    </p>
+                    <p className="text-xs text-amber-700 mt-1">
+                      Зарегистрируйтесь или войдите в аккаунт, чтобы играть онлайн
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Кнопка начала игры */}
           <button
             onClick={handleStartGame}
             className="w-full theme-button-primary font-bold py-3 px-4 rounded-lg text-lg transition-colors shadow-md hover:shadow-lg cursor-pointer"
@@ -211,18 +233,13 @@ export default function GameModeSelector() {
             </div>
           </button>
 
-          {selectedMode === 'online' && (
+          {/* Примечание для онлайн игры */}
+          {selectedMode === 'online' && isAuthenticated && (
             <div className="mt-3 p-3 theme-bg-tertiary theme-border-secondary border rounded-lg">
               <p className="text-xs theme-text-secondary">
                 <strong>Примечание:</strong> Для онлайн игры будет создана комната.
                 Вы сможете поделиться ссылкой с другом.
               </p>
-            </div>
-          )}
-
-          {!isAuthenticated && (
-            <div className="mt-1 text-xs theme-button-danger">
-              * Онлайн игра доступна только зарегистрированным пользователям
             </div>
           )}
         </div>

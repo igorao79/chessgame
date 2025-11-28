@@ -9,15 +9,16 @@ import OnlineGame from '@/components/OnlineGame';
 import UserProfile from '@/components/UserProfile';
 import { PieceThemeSelector } from '@/components/PieceThemeSelector';
 import { ChessBackground } from '@/components/ChessBackground';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { GiChessKing } from 'react-icons/gi';
 
 function HomePage() {
-  const { gameState } = useGame();
+  const { gameState, resetGame } = useGame();
   const { isAuthenticated } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [isOnlineMode, setIsOnlineMode] = useState(false);
 
   useEffect(() => {
@@ -33,6 +34,15 @@ function HomePage() {
     }
   }, [searchParams, isAuthenticated]);
 
+  // Обработчик клика на логотип - прерывает игру и переходит на главную
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (gameState) {
+      resetGame(); // Прерываем текущую игру
+    }
+    router.push('/'); // Переходим на главную страницу без перезагрузки
+  };
+
   return (
     <main className="min-h-screen theme-bg-primary relative">
       {/* Анимированный шахматный фон */}
@@ -42,12 +52,12 @@ function HomePage() {
       <header className="relative z-10">
         <div className="glassmorphism-header-full">
           <div className="max-w-7xl mx-auto flex justify-between items-center px-6 py-3">
-            <Link href="/">
+            <div onClick={handleLogoClick}>
               <h1 className="text-xl font-bold theme-text-primary hover:theme-text-accent transition-all duration-300 hover:scale-105 inline-flex items-center justify-center gap-2 cursor-pointer">
                 <GiChessKing className="text-2xl flex-shrink-0" style={{ marginTop: '-6px' }} />
                 <span>Chessarao</span>
               </h1>
-            </Link>
+            </div>
             <UserProfile />
           </div>
         </div>
@@ -62,11 +72,9 @@ function HomePage() {
         ) : gameState?.mode === 'online' || isOnlineMode ? (
           <OnlineGame />
         ) : (
-          <div className="flex flex-col items-center gap-6">
-            {/* Информация об игре по центру */}
-            <div className="flex justify-center">
-              <GameInfo />
-            </div>
+          <div className="flex items-start justify-start gap-8">
+            {/* Информация об игре слева */}
+            <GameInfo />
 
             {/* Шахматная доска */}
             <ChessBoard />

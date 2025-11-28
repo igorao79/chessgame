@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useGame } from '@/contexts/GameContext';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 // Импортируем ChessBoard.js и jQuery
 declare global {
@@ -205,6 +205,44 @@ export default function ChessBoard() {
           [class*="board-"] * {
             overflow: visible !important;
           }
+
+          /* Более специфичные правила для предотвращения обрезки фигур */
+          .square-55d63 {
+            overflow: visible !important;
+          }
+
+          .piece-417db {
+            overflow: visible !important;
+            z-index: 1000 !important;
+          }
+
+          /* Во время перетаскивания фигуры должны быть над всем */
+          .ui-draggable-dragging {
+            overflow: visible !important;
+            z-index: 9999 !important;
+            pointer-events: none !important;
+          }
+
+          /* Контейнер доски */
+          div[id^="chessboard-"] {
+            overflow: visible !important;
+          }
+
+
+          /* Специфично для перетаскиваемых элементов */
+          .ui-draggable {
+            overflow: visible !important;
+          }
+
+          /* Предотвращаем обрезку на всех уровнях */
+          .chessboard-63f37,
+          .chessboard-63f37 *,
+          .board-b72b1,
+          .board-b72b1 *,
+          .square-55d63,
+          .square-55d63 * {
+            overflow: visible !important;
+          }
         `;
         document.head.appendChild(style);
       }
@@ -232,7 +270,7 @@ export default function ChessBoard() {
 
   if (!gameState || !chess) {
     return (
-      <div className="w-full max-w-[600px] mx-auto">
+      <div className="w-full max-w-[800px] mx-auto">
         <div className="bg-gray-200 rounded-lg p-8 text-center">
           <p className="text-gray-600">Загрузка шахматной доски...</p>
         </div>
@@ -241,7 +279,7 @@ export default function ChessBoard() {
   }
 
   return (
-    <div className="w-full max-w-[600px] mx-auto">
+    <div className="w-full max-w-[800px]">
       <div
         ref={boardRef}
         id={`chessboard-${gameState.id}`}

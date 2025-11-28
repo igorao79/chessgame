@@ -1,9 +1,13 @@
 'use client';
 
 import { useGame } from '@/contexts/GameContext';
+import { useState, useRef } from 'react';
+import MoveHistoryDropdown from './MoveHistoryDropdown';
 
 export default function GameInfo() {
   const { gameState, resetGame } = useGame();
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const historyButtonRef = useRef<HTMLButtonElement | null>(null);
 
   if (!gameState) return null;
 
@@ -32,9 +36,35 @@ export default function GameInfo() {
   };
 
   return (
-    <div className="theme-bg-primary rounded-lg shadow-xl p-4 max-w-sm">
+    <div className="theme-bg-primary rounded-lg shadow-xl p-4 max-w-sm relative">
+      {/* Кнопка истории ходов */}
+      <button
+        ref={historyButtonRef}
+        onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+        className="absolute top-2 right-2 z-10 theme-bg-secondary hover:theme-bg-primary rounded-full p-2 shadow-lg transition-all duration-200 hover:scale-105 border theme-border-secondary"
+        title="История ходов"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="theme-text-primary"
+        >
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14,2 14,8 20,8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10,9 9,9 8,9"/>
+        </svg>
+      </button>
+
       {/* Заголовок режима игры */}
-      <div className="text-center mb-3">
+      <div className="text-center mb-3 pr-12">
         <h2 className="text-lg font-bold theme-text-primary">{getModeText()}</h2>
       </div>
 
@@ -65,25 +95,12 @@ export default function GameInfo() {
         </div>
       )}
 
-      {/* История ходов */}
-      <div className="border-t theme-border-secondary pt-3">
-        <h3 className="text-sm font-semibold theme-text-primary mb-2 text-center">
-          История ходов ({gameState.moves.length})
-        </h3>
-        <div className="max-h-24 overflow-y-auto theme-bg-secondary rounded p-2">
-          {gameState.moves.length === 0 ? (
-            <p className="text-center theme-text-muted text-xs">Ходы еще не сделаны</p>
-          ) : (
-            <div className="space-y-1">
-              {gameState.moves.map((move, index) => (
-                <div key={index} className="text-xs theme-text-primary text-center">
-                  {Math.floor(index / 2) + 1}.{index % 2 === 0 ? '' : '..'} {move}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Dropdown истории ходов */}
+      <MoveHistoryDropdown
+        isOpen={isHistoryOpen}
+        onToggle={() => setIsHistoryOpen(!isHistoryOpen)}
+        triggerRef={historyButtonRef}
+      />
     </div>
   );
 }

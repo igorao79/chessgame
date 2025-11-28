@@ -5,7 +5,7 @@ import { GameProvider } from "@/contexts/GameContext";
 import { SocketProvider } from "@/contexts/SocketContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { PieceThemeProvider } from "@/contexts/PieceThemeContext";
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,9 +36,7 @@ export default function RootLayout({
           <AuthProvider>
             <SocketProvider>
               <GameProvider>
-                <PieceThemeProvider>
-                  {children}
-                </PieceThemeProvider>
+                {children}
               </GameProvider>
             </SocketProvider>
           </AuthProvider>
