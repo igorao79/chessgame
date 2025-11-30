@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthModal from './AuthModal';
@@ -14,10 +15,15 @@ export default function UserProfile() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [showDropdown, setShowDropdown] = useState(false);
   const [dropdownWidth, setDropdownWidth] = useState(256);
-  const [isMounted, setIsMounted] = useState(false);
+  const [isMounted] = useState(true);
+
+  // Функция для закрытия модального окна аутентификации
+  const closeAuthModal = useCallback(() => {
+    setShowAuthModal(false);
+  }, []);
 
   // Используем Floating UI для правильного позиционирования
-  const { refs, floatingStyles, context } = useFloating({
+  const { refs, floatingStyles } = useFloating({
     open: showDropdown,
     onOpenChange: setShowDropdown,
     middleware: [
@@ -31,7 +37,6 @@ export default function UserProfile() {
 
   // Устанавливаем mounted состояние и начальную ширину
   useEffect(() => {
-    setIsMounted(true);
     // Устанавливаем ширину дропдауна в зависимости от размера экрана
     const updateWidth = () => {
       setDropdownWidth(window.innerWidth < 640 ? Math.min(window.innerWidth - 32, 240) : 256);
@@ -42,18 +47,26 @@ export default function UserProfile() {
   }, []);
 
   // Автоматически закрываем модальное окно при успешной аутентификации
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isAuthenticated && showAuthModal) {
-      setShowAuthModal(false);
+      flushSync(() => {
+        closeAuthModal();
+      });
     }
-  }, [isAuthenticated, showAuthModal]);
+  }, [isAuthenticated, showAuthModal, closeAuthModal]);
 
   // Закрываем дропдаун при клике вне него
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      const isClickOnButton = refs.reference.current && refs.reference.current.contains(target);
-      const isClickOnDropdown = refs.floating.current && refs.floating.current.contains(target);
+
+      // Проверяем, что target является HTMLElement
+      if (!(target instanceof HTMLElement)) return;
+
+      const isClickOnButton = refs.reference.current && 'contains' in refs.reference.current &&
+        refs.reference.current.contains(target);
+      const isClickOnDropdown = refs.floating.current && 'contains' in refs.floating.current &&
+        refs.floating.current.contains(target);
 
       if (!isClickOnButton && !isClickOnDropdown) {
         setShowDropdown(false);
@@ -147,7 +160,9 @@ export default function UserProfile() {
 
       {/* Кнопка настроек с шестеренкой */}
       <button
-        ref={refs.setReference}
+        ref={(node) => {
+          refs.setReference(node);
+        }}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -162,7 +177,9 @@ export default function UserProfile() {
       {/* Дропдаун с информацией об аккаунте через портал */}
       {isMounted && showDropdown && createPortal(
         <div
-          ref={refs.setFloating}
+          ref={(node) => {
+            refs.setFloating(node);
+          }}
           className="theme-bg-primary glassmorphism-selector rounded-lg shadow-xl border theme-border-primary z-[9999] transform transition-all duration-200 ease-out opacity-100 scale-100 will-change-transform"
           style={{
             ...floatingStyles,

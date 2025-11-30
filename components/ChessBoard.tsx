@@ -1,36 +1,65 @@
 'use client';
 
 import { useGame } from '@/contexts/GameContext';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 
 // Импортируем ChessBoard.js и jQuery
 declare global {
   interface Window {
-    $: any;
-    jQuery: any;
-    Chessboard: any;
+    $: typeof import('jquery');
+    jQuery: typeof import('jquery');
+    Chessboard: {
+      (element: string | HTMLElement, config?: ChessBoardConfig): ChessBoardInstance;
+    };
   }
 }
+
+interface ChessBoardConfig {
+  position?: string;
+  orientation?: 'white' | 'black';
+  draggable?: boolean;
+  dropOffBoard?: string;
+  onDragStart?: (source: string, piece: string) => boolean;
+  onDragMove?: (newLocation: string, oldLocation: string, source: string) => void;
+  onDrop?: (source: string, target: string) => string | null;
+  onSnapEnd?: () => void;
+}
+
+interface ChessBoardInstance {
+  position: (fen: string) => void;
+  destroy: () => void;
+}
+
+interface ChessMove {
+  to: string;
+  from: string;
+  piece: string;
+  captured?: string;
+  promotion?: string;
+  flags: string;
+}
+
+import { Square } from 'chess.js';
 
 export default function ChessBoard() {
   const { gameState, chess, makeMove, isPlayerTurn } = useGame();
   const boardRef = useRef<HTMLDivElement>(null);
-  const chessboardRef = useRef<any>(null);
+  const chessboardRef = useRef<ChessBoardInstance | null>(null);
 
   // Получить возможные ходы для выбранной фигуры
-  const getPossibleMoves = (from: string): string[] => {
+  const getPossibleMoves = useCallback((from: Square): Square[] => {
     if (!chess) return [];
 
     try {
-      const moves = chess.moves({ square: from as any, verbose: true });
-      return moves.map(move => move.to).filter(to => to !== null) as string[];
+      const moves = chess.moves({ square: from, verbose: true }) as ChessMove[];
+      return moves.map(move => move.to as Square).filter(to => to !== null);
     } catch {
       return [];
     }
-  };
+  }, [chess]);
 
   // Подсветить квадраты
-  const highlightSquares = (squares: string[]) => {
+  const highlightSquares = useCallback((squares: Square[]) => {
     if (!chessboardRef.current || !boardRef.current) return;
 
     // Очищаем старую подсветку
@@ -41,15 +70,15 @@ export default function ChessBoard() {
     squares.forEach(square => {
       $board.find(`.square-${square}`).addClass('highlight-square');
     });
-  };
+  }, []);
 
   // Очистить подсветку
-  const clearHighlights = () => {
+  const clearHighlights = useCallback(() => {
     if (boardRef.current) {
       const $board = window.$(`#${boardRef.current.id}`);
       $board.find('.square-55d63').removeClass('highlight-square');
     }
-  };
+  }, []);
 
   // Инициализация доски
   useEffect(() => {
@@ -93,7 +122,7 @@ export default function ChessBoard() {
       // Конфигурация доски
       const config = {
         position: gameState.fen,
-        orientation: gameState.playerColor === 'white' ? 'white' : 'black',
+        orientation: (gameState.playerColor === 'white' ? 'white' : 'black') as 'white' | 'black',
         draggable: true,
         dropOffBoard: 'snapback',
 
@@ -111,8 +140,8 @@ export default function ChessBoard() {
           if (!isPlayerPiece) return false;
 
           // Показываем возможные ходы
-          const moves = getPossibleMoves(source);
-          highlightSquares([source, ...moves]);
+          const moves = getPossibleMoves(source as Square);
+          highlightSquares([source as Square, ...moves]);
 
           console.log('🟡 Drag start:', source, 'Possible moves:', moves);
           return true;
@@ -125,15 +154,15 @@ export default function ChessBoard() {
         },
 
         // Отпускание фигуры - проверяем и выполняем ход
-        onDrop: (source: string, target: string, piece: string) => {
+        onDrop: (source: string, target: string) => {
           console.log('🎯 Drop attempt:', source, 'to', target);
 
           // Очищаем подсветку
           clearHighlights();
 
           // Проверяем, что ход возможен
-          const possibleMoves = getPossibleMoves(source);
-          if (!possibleMoves.includes(target)) {
+          const possibleMoves = getPossibleMoves(source as Square);
+          if (!possibleMoves.includes(target as Square)) {
             console.log('❌ Invalid move:', source, 'to', target);
             return 'snapback';
           }
@@ -159,18 +188,6 @@ export default function ChessBoard() {
           console.log('🏁 Snap end - position updated');
         },
 
-        // Тема фигур - используем несколько источников с fallback
-        pieceTheme: function(piece) {
-          // Пробуем несколько источников
-          const sources = [
-            'https://chessboardjs.com/img/chesspieces/wikipedia/' + piece + '.png',
-            'https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/merida/' + piece + '.png',
-            'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/' + piece + '.png',
-            'https://chessboardjs.com/img/chesspieces/alpha/' + piece + '.png'
-          ];
-          // Возвращаем первый источник (ChessBoard.js попробует остальные при ошибке)
-          return sources[0];
-        }
       };
 
       // Создаем доску
@@ -257,7 +274,7 @@ export default function ChessBoard() {
         console.log('🧹 ChessBoard destroyed');
       }
     };
-  }, [gameState?.id]);
+  }, [gameState?.id, gameState, chess, getPossibleMoves, isPlayerTurn, makeMove, highlightSquares, clearHighlights]);
 
   // Обновляем позицию когда меняется FEN
   useEffect(() => {
@@ -266,7 +283,7 @@ export default function ChessBoard() {
       clearHighlights(); // Очищаем подсветку при обновлении позиции
       console.log('🔄 Position updated:', gameState.fen);
     }
-  }, [gameState?.fen]);
+  }, [gameState?.fen, gameState, clearHighlights]);
 
   if (!gameState || !chess) {
     return (
@@ -279,7 +296,7 @@ export default function ChessBoard() {
   }
 
   return (
-    <div className="w-full max-w-[95vw] md:max-w-[800px]">
+    <div className="w-full max-w-[800px]">
       <div
         ref={boardRef}
         id={`chessboard-${gameState.id}`}
