@@ -32,6 +32,12 @@ app.prepare().then(() => {
         return;
       }
 
+      // Пропускаем Socket.io маршруты, чтобы они не обрабатывались Next.js
+      if (parsedUrl.pathname && parsedUrl.pathname.startsWith('/api/socket')) {
+        // Socket.io сам обработает этот маршрут
+        return;
+      }
+
       await handle(req, res, parsedUrl);
     } catch (err) {
       console.error('Error occurred handling', req.url, err);
@@ -45,9 +51,13 @@ app.prepare().then(() => {
     path: '/api/socket',
     addTrailingSlash: false,
     cors: {
-      origin: '*',
+      origin: function (origin, callback) {
+        // Разрешаем все origins для совместимости с различными хостингами
+        callback(null, true);
+      },
       methods: ['GET', 'POST'],
       credentials: false,
+      allowedHeaders: ['*'],
     },
     // Дополнительные опции для совместимости с Render.com
     transports: ['websocket', 'polling'],

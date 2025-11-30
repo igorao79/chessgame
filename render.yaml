@@ -13,8 +13,6 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: NEXT_PUBLIC_SOCKET_URL
-        sync: false # Настроить вручную после первого деплоя
 
 # Redis (опционально, но рекомендуется для онлайн игр)
 # Раскомментируйте, если хотите автоматически создать Redis:
