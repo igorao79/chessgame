@@ -18,6 +18,20 @@ app.prepare().then(() => {
   const server = createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url, true);
+
+      // Health check endpoint для Render.com
+      if (parsedUrl.pathname === '/api/health') {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({
+          status: 'ok',
+          timestamp: new Date().toISOString(),
+          rooms: rooms.size,
+          connections: io.engine.clientsCount
+        }));
+        return;
+      }
+
       await handle(req, res, parsedUrl);
     } catch (err) {
       console.error('Error occurred handling', req.url, err);
@@ -33,7 +47,13 @@ app.prepare().then(() => {
     cors: {
       origin: '*',
       methods: ['GET', 'POST'],
+      credentials: false,
     },
+    // Дополнительные опции для совместимости с Render.com
+    transports: ['websocket', 'polling'],
+    allowEIO3: true,
+    pingTimeout: 60000,
+    pingInterval: 25000,
   });
 
   console.log('Socket.io сервер инициализирован');

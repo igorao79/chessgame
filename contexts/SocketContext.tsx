@@ -24,15 +24,16 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     
     const socketInstance = io(socketUrl, {
       path: '/api/socket',
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'], // Начинаем с polling для Render.com
       withCredentials: false, // Отключаем credentials для совместимости с CORS
       autoConnect: false, // Отключаем авто-подключение, будем подключаться вручную
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 3000,
-      reconnectionAttempts: 10,
-      timeout: 10000,
-      forceNew: false
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 15,
+      timeout: 20000, // Увеличиваем timeout для Render.com
+      forceNew: false,
+      upgrade: true, // Разрешаем upgrade с polling на websocket
     });
     return socketInstance;
   }, []);
@@ -50,14 +51,12 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('❌ Socket connection error:', error.message);
+      console.error('❌ Socket connection error:', error.message, error);
       setIsConnected(false);
 
-      // Попробуем подключиться через polling если websocket не работает
-      if (error.message.includes('websocket') && socket.io.opts.transports?.[0] === 'websocket') {
-        console.log('🔄 Trying polling transport...');
-        socket.io.opts.transports = ['polling'];
-        setTimeout(() => socket.connect(), 1000);
+      // Для Render.com сначала пробуем polling, потом websocket
+      if (socket.io.opts.transports?.[0] === 'polling' && !error.message.includes('xhr poll error')) {
+        console.log('🔄 Connection failed, will retry with reconnection...');
       }
     });
 
