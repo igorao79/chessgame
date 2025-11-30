@@ -17,9 +17,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const socket = useMemo(() => {
     // В production используем текущий домен, в разработке - localhost
     const socketUrl = process.env.NODE_ENV === 'production'
-      ? (typeof window !== 'undefined' ? window.location.origin : 'https://chessgame-ckpq.onrender.com')
+      ? 'https://chessgame-ckpq.onrender.com'
       : 'http://localhost:3000';
     console.log('🔌 Creating socket instance for:', socketUrl);
+    console.log('🔍 Current window.location.origin:', typeof window !== 'undefined' ? window.location.origin : 'SSR');
     
     const socketInstance = io(socketUrl, {
       path: '/api/socket',
