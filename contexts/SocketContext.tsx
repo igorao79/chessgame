@@ -15,16 +15,16 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
   // Создаём socket instance один раз
   const socket = useMemo(() => {
-    // Для локальной разработки всегда используем localhost:3000
-    const socketUrl = process.env.NODE_ENV === 'production' 
-      ? (process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000')
+    // В production используем текущий домен, в разработке - localhost
+    const socketUrl = process.env.NODE_ENV === 'production'
+      ? (typeof window !== 'undefined' ? window.location.origin : 'https://chessgame-ckpq.onrender.com')
       : 'http://localhost:3000';
     console.log('🔌 Creating socket instance for:', socketUrl);
     
     const socketInstance = io(socketUrl, {
       path: '/api/socket',
       transports: ['websocket', 'polling'],
-      withCredentials: true,
+      withCredentials: false, // Отключаем credentials для совместимости с CORS
       autoConnect: false, // Отключаем авто-подключение, будем подключаться вручную
       reconnection: true,
       reconnectionDelay: 1000,
