@@ -9,7 +9,8 @@ import OnlineGame from '@/components/OnlineGame';
 import UserProfile from '@/components/UserProfile';
 import { ChessBackground } from '@/components/ChessBackground';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useEffect, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import Link from 'next/link';
 import { GiChessKing } from 'react-icons/gi';
 
 function HomePage() {
@@ -17,17 +18,20 @@ function HomePage() {
   const { isAuthenticated } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
-  // Вычисляем online режим на основе URL параметров и аутентификации
-  const roomParam = searchParams.get('room');
-  const isOnlineMode = roomParam && isAuthenticated;
+  const [isOnlineMode, setIsOnlineMode] = useState(false);
 
-  // Редирект неаутентифицированных пользователей при наличии room параметра
   useEffect(() => {
-    if (roomParam && !isAuthenticated) {
-      // Если пользователь не авторизован, перенаправляем на главную
-      window.history.replaceState({}, '', '/');
+    const roomParam = searchParams.get('room');
+    if (roomParam) {
+      // Проверяем аутентификацию для онлайн режима
+      if (!isAuthenticated) {
+        // Если пользователь не авторизован, перенаправляем на главную
+        window.history.replaceState({}, '', '/');
+        return;
+      }
+      setIsOnlineMode(true);
     }
-  }, [roomParam, isAuthenticated]);
+  }, [searchParams, isAuthenticated]);
 
   // Обработчик клика на логотип - прерывает игру и переходит на главную
   const handleLogoClick = (e: React.MouseEvent) => {
