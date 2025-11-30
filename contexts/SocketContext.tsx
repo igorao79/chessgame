@@ -23,17 +23,12 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     console.log('🔍 Current window.location.origin:', typeof window !== 'undefined' ? window.location.origin : 'SSR');
     
     const socketInstance = io(socketUrl, {
-      path: '/api/socket',
-      transports: ['polling', 'websocket'], // Начинаем с polling для Render.com
-      withCredentials: false, // Отключаем credentials для совместимости с CORS
-      autoConnect: false, // Отключаем авто-подключение, будем подключаться вручную
+      transports: ['polling', 'websocket'],
+      autoConnect: false,
       reconnection: true,
       reconnectionDelay: 2000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 15,
-      timeout: 20000, // Увеличиваем timeout для Render.com
-      forceNew: false,
-      upgrade: true, // Разрешаем upgrade с polling на websocket
+      reconnectionAttempts: 10,
+      timeout: 10000,
     });
     return socketInstance;
   }, []);

@@ -48,7 +48,7 @@ app.prepare().then(() => {
       }
 
       // Пропускаем маршруты Socket.io
-      if (parsedUrl.pathname && parsedUrl.pathname.startsWith('/api/socket')) {
+      if (parsedUrl.pathname && parsedUrl.pathname.startsWith('/socket.io')) {
         // Socket.io сам обработает этот маршрут
         return;
       }
@@ -64,17 +64,11 @@ app.prepare().then(() => {
 
   // Инициализация Socket.io
   const io = new Server(server, {
-    path: '/api/socket',
-    addTrailingSlash: false,
     cors: {
       origin: 'https://chessgame-delta-five.vercel.app',
-      methods: ['GET', 'POST'],
-      credentials: false,
+      methods: ['GET', 'POST']
     },
-    transports: ['polling', 'websocket'],
-    allowEIO3: true,
-    pingTimeout: 60000,
-    pingInterval: 25000,
+    transports: ['polling', 'websocket']
   });
 
   console.log('Socket.io сервер инициализирован');
