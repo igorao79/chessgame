@@ -96,6 +96,7 @@ export default function ChessBoard() {
         orientation: gameState.playerColor === 'white' ? 'white' : 'black',
         draggable: true,
         dropOffBoard: 'snapback',
+        responsive: true, // Адаптивная доска для мобильных устройств
 
         // Начало перетаскивания - показываем возможные ходы
         onDragStart: (source: string, piece: string) => {

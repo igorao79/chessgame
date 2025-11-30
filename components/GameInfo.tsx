@@ -36,7 +36,7 @@ export default function GameInfo() {
   };
 
   return (
-    <div className="theme-bg-primary rounded-lg shadow-xl p-4 max-w-sm relative">
+    <div className="theme-bg-primary rounded-lg shadow-xl p-3 md:p-4 w-full max-w-sm md:max-w-xs lg:max-w-sm relative">
       {/* Кнопка истории ходов */}
       <button
         ref={historyButtonRef}
