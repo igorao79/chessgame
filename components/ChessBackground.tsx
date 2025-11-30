@@ -13,7 +13,7 @@ interface ChessPiece {
 
 export function ChessBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
   const piecesRef = useRef<ChessPiece[]>([]);
 
   // Unicode символы шахматных фигур
