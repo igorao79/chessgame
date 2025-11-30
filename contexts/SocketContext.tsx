@@ -15,71 +15,54 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
   // Создаём socket instance один раз
   const socket = useMemo(() => {
-    // В production используем текущий домен, в разработке - localhost
     const socketUrl = process.env.NODE_ENV === 'production'
-      ? 'https://chessgame-ckpq.onrender.com'
-      : 'http://localhost:3000';
+      ? 'https://chessgame-ckpq.onrender.com' // твой Render URL
+      : 'http://localhost:10000'; // локальная разработка
+
     console.log('🔌 Creating socket instance for:', socketUrl);
-    console.log('🔍 Current window.location.origin:', typeof window !== 'undefined' ? window.location.origin : 'SSR');
-    
+
     const socketInstance = io(socketUrl, {
-      transports: ['polling', 'websocket'],
+      transports: ['websocket'], // отключаем polling
       autoConnect: false,
       reconnection: true,
       reconnectionDelay: 2000,
       reconnectionAttempts: 10,
       timeout: 10000,
+      withCredentials: true // для CORS
     });
+
     return socketInstance;
   }, []);
 
   useEffect(() => {
-    // Настраиваем обработчики событий
-    socket.on('connect', () => {
+    if (!socket) return;
+
+    const onConnect = () => {
       console.log('✅ Socket connected');
       setIsConnected(true);
-    });
+    };
 
-    socket.on('disconnect', (reason) => {
+    const onDisconnect = (reason: string) => {
       console.log('❌ Socket disconnected:', reason);
       setIsConnected(false);
-    });
+    };
 
-    socket.on('connect_error', (error) => {
-      console.error('❌ Socket connection error:', error.message, error);
+    const onConnectError = (error: Error & { message: string }) => {
+      console.error('❌ Socket connection error:', error.message);
       setIsConnected(false);
+    };
 
-      // Для Render.com сначала пробуем polling, потом websocket
-      if (socket.io.opts.transports?.[0] === 'polling' && !error.message.includes('xhr poll error')) {
-        console.log('🔄 Connection failed, will retry with reconnection...');
-      }
-    });
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    socket.on('connect_error', onConnectError);
 
-    socket.on('reconnect_attempt', (attempt) => {
-      console.log(`🔄 Reconnection attempt ${attempt}`);
-    });
+    socket.connect(); // подключаемся
 
-    socket.on('reconnect', (attempt) => {
-      console.log(`✅ Reconnected after ${attempt} attempts`);
-      setIsConnected(true);
-    });
-
-    socket.on('reconnect_error', (error) => {
-      console.error('❌ Reconnection failed:', error.message);
-    });
-
-    // Подключаемся к серверу
-    console.log('🚀 Connecting to socket server...');
-    socket.connect();
-
-    // Не отключаем socket при размонтировании, чтобы избежать циклов переподключений
     return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('connect_error');
-      socket.off('reconnect_attempt');
-      socket.off('reconnect');
-      socket.off('reconnect_error');
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('connect_error', onConnectError);
+      socket.disconnect(); // можно отключить при размонтировании
     };
   }, [socket]);
 
@@ -92,9 +75,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
 export function useSocket() {
   const context = useContext(SocketContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useSocket must be used within a SocketProvider');
   }
   return context;
 }
-
