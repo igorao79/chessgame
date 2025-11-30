@@ -1,8 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { Chess } from 'chess.js';
-import { GameState, GameMode, PlayerColor, Difficulty, Move } from '@/types/game';
+import { Chess, Square } from 'chess.js';
+import { GameState, GameMode, PlayerColor, Difficulty, Move, GameStatus } from '@/types/game';
 import { getBestMove } from '@/lib/chess-ai';
 import { useSounds } from '@/lib/sounds';
 
@@ -11,6 +11,7 @@ interface GameContextType {
   chess: Chess | null;
   startGame: (mode: GameMode, playerColor?: PlayerColor, difficulty?: Difficulty) => void;
   makeMove: (move: Move) => boolean;
+  applyOpponentMove: (fen: string, move: string) => boolean;
   resetGame: () => void;
   isPlayerTurn: () => boolean;
 }
@@ -36,14 +37,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
             ...prev,
             fen: chessInstance.fen(),
             moves: [...prev.moves, bestMove],
-            currentTurn: chessInstance.turn() === 'w' ? 'white' : 'black',
-            status: chessInstance.isGameOver() ? 'finished' : 'playing',
+            currentTurn: (chessInstance.turn() === 'w' ? 'white' : 'black') as PlayerColor,
+            status: chessInstance.isGameOver() ? ('finished' as GameStatus) : ('playing' as GameStatus),
             winner: chessInstance.isCheckmate()
-              ? chessInstance.turn() === 'w'
-                ? 'black'
-                : 'white'
+              ? (chessInstance.turn() === 'w'
+                ? 'black' as PlayerColor
+                : 'white' as PlayerColor)
               : chessInstance.isDraw()
-              ? 'draw'
+              ? ('draw' as const)
               : undefined,
           };
 
@@ -99,14 +100,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       try {
         // Проверяем, требуется ли превращение пешки
-        const piece = chess.get(move.from);
+        const piece = chess.get(move.from as Square);
         const isPawnPromotion = piece && piece.type === 'p' &&
           ((piece.color === 'w' && move.to[1] === '8') ||
            (piece.color === 'b' && move.to[1] === '1'));
 
         const result = chess.move({
-          from: move.from,
-          to: move.to,
+          from: move.from as Square,
+          to: move.to as Square,
           promotion: isPawnPromotion ? (move.promotion || 'q') : undefined,
         });
 
@@ -172,14 +173,50 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setGameState(null);
   }, []);
 
+  const applyOpponentMove = useCallback((fen: string, move: string): boolean => {
+    if (!gameState || !chess) return false;
+
+    try {
+      // Устанавливаем позицию из FEN
+      chess.load(fen);
+
+      // Обновляем состояние игры
+      setGameState(prev => {
+        if (!prev) return prev;
+
+        const newState = {
+          ...prev,
+          fen: chess.fen(),
+          moves: [...prev.moves, move],
+          currentTurn: (chess.turn() === 'w' ? 'white' : 'black') as PlayerColor,
+          status: chess.isGameOver() ? ('finished' as GameStatus) : ('playing' as GameStatus),
+          winner: chess.isCheckmate()
+            ? (chess.turn() === 'w'
+              ? 'black' as PlayerColor
+              : 'white' as PlayerColor)
+            : chess.isDraw()
+            ? ('draw' as const)
+            : undefined,
+        };
+
+        return newState;
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error applying opponent move:', error);
+      return false;
+    }
+  }, [gameState, chess]);
+
   const isPlayerTurn = useCallback((): boolean => {
     if (!gameState || !chess) return false;
-    
+
     if (gameState.mode === 'ai') {
       const currentColor = chess.turn() === 'w' ? 'white' : 'black';
       return currentColor === gameState.playerColor;
     }
-    
+
     return true; // Для локальной игры всегда можно ходить
   }, [gameState, chess]);
 
@@ -190,6 +227,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         chess,
         startGame,
         makeMove,
+        applyOpponentMove,
         resetGame,
         isPlayerTurn,
       }}

@@ -52,8 +52,8 @@ export default function UserProfile() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      const isClickOnButton = refs.reference.current && refs.reference.current.contains(target);
-      const isClickOnDropdown = refs.floating.current && refs.floating.current.contains(target);
+      const isClickOnButton = refs.reference.current && refs.reference.current instanceof HTMLElement && refs.reference.current.contains(target);
+      const isClickOnDropdown = refs.floating.current && refs.floating.current instanceof HTMLElement && refs.floating.current.contains(target);
 
       if (!isClickOnButton && !isClickOnDropdown) {
         setShowDropdown(false);
