@@ -11,33 +11,49 @@ const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
 // Хранилище активных комнат в памяти
-// Все игры хранятся здесь, пока сервер запущен
 const rooms = new Map();
 
 app.prepare().then(() => {
+  // Создаём HTTP сервер
   const server = createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url, true);
 
-      // Health check endpoint для Render.com
+      // CORS preflight
+      if (req.method === 'OPTIONS') {
+        res.writeHead(200, {
+          'Access-Control-Allow-Origin': 'https://chessgame-delta-five.vercel.app',
+          'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Requested-With',
+          'Access-Control-Allow-Credentials': 'false',
+        });
+        res.end();
+        return;
+      }
+
+      // Health check endpoint
       if (parsedUrl.pathname === '/api/health') {
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/json');
+        res.writeHead(200, {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': 'https://chessgame-delta-five.vercel.app',
+          'Access-Control-Allow-Methods': 'GET',
+        });
         res.end(JSON.stringify({
           status: 'ok',
           timestamp: new Date().toISOString(),
           rooms: rooms.size,
-          connections: io.engine.clientsCount
+          connections: io ? io.engine.clientsCount : 0
         }));
         return;
       }
 
-      // Пропускаем Socket.io маршруты, чтобы они не обрабатывались Next.js
+      // Пропускаем маршруты Socket.io
       if (parsedUrl.pathname && parsedUrl.pathname.startsWith('/api/socket')) {
         // Socket.io сам обработает этот маршрут
         return;
       }
 
+      // Остальные маршруты Next.js
       await handle(req, res, parsedUrl);
     } catch (err) {
       console.error('Error occurred handling', req.url, err);
@@ -51,16 +67,11 @@ app.prepare().then(() => {
     path: '/api/socket',
     addTrailingSlash: false,
     cors: {
-      origin: function (origin, callback) {
-        // Разрешаем все origins для совместимости с различными хостингами
-        callback(null, true);
-      },
+      origin: 'https://chessgame-delta-five.vercel.app',
       methods: ['GET', 'POST'],
       credentials: false,
-      allowedHeaders: ['*'],
     },
-    // Дополнительные опции для совместимости с Render.com
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
     allowEIO3: true,
     pingTimeout: 60000,
     pingInterval: 25000,
@@ -68,6 +79,7 @@ app.prepare().then(() => {
 
   console.log('Socket.io сервер инициализирован');
 
+  // --- Socket.io события ---
   io.on('connection', (socket) => {
     console.log('✅ Игрок подключился:', socket.id);
     console.log(`📊 Статистика: Комнат: ${rooms.size}, Подключений: ${io.engine.clientsCount}`);
@@ -75,49 +87,30 @@ app.prepare().then(() => {
     // Создание новой комнаты
     socket.on('create-room', (callback) => {
       const roomId = Math.random().toString(36).substring(7);
-      
-      const roomData = {
-        players: [socket.id],
-        gameState: null,
-        createdAt: new Date().toISOString(),
-      };
-      
+      const roomData = { players: [socket.id], gameState: null, createdAt: new Date().toISOString() };
       rooms.set(roomId, roomData);
       socket.join(roomId);
-      
       console.log(`🎮 Комната создана: ${roomId} игроком ${socket.id}`);
-      
       callback({ roomId });
     });
 
-    // Присоединение к существующей комнате
+    // Присоединение к комнате
     socket.on('join-room', ({ roomId }, callback) => {
       const room = rooms.get(roomId);
-      
-      if (!room) {
-        console.log(`❌ Комната не найдена: ${roomId}`);
-        callback({ error: 'Комната не найдена' });
-        return;
-      }
-
-      if (room.players.length >= 2) {
-        console.log(`❌ Комната заполнена: ${roomId}`);
-        callback({ error: 'Комната заполнена' });
-        return;
-      }
+      if (!room) return callback({ error: 'Комната не найдена' });
+      if (room.players.length >= 2) return callback({ error: 'Комната заполнена' });
 
       room.players.push(socket.id);
       socket.join(roomId);
-      
+
       console.log(`✅ Игрок ${socket.id} присоединился к комнате ${roomId}`);
 
-      // Назначаем цвета игрокам
+      // Назначаем цвета
       const playerColors = {
         [room.players[0]]: 'white',
         [room.players[1]]: 'black',
       };
 
-      // Уведомляем обоих игроков о начале игры
       room.players.forEach((playerId) => {
         io.to(playerId).emit('game-start', {
           roomId,
@@ -129,42 +122,20 @@ app.prepare().then(() => {
       callback({ success: true, color: 'black' });
     });
 
-    // Обработка хода игрока
+    // Ход игрока
     socket.on('move', ({ roomId, move, fen }) => {
       const room = rooms.get(roomId);
-      
-      if (!room) {
-        console.log(`❌ Попытка хода в несуществующей комнате: ${roomId}`);
-        return;
-      }
-
-      // Обновляем состояние игры
-      room.gameState = { 
-        fen, 
-        lastMove: move,
-        timestamp: new Date().toISOString()
-      };
-      
-      console.log(`♟️ Ход в комнате ${roomId}: ${move}`);
-
-      // Отправляем ход оппоненту
+      if (!room) return;
+      room.gameState = { fen, lastMove: move, timestamp: new Date().toISOString() };
       const opponent = room.players.find((p) => p !== socket.id);
-      if (opponent) {
-        io.to(opponent).emit('opponent-move', { move, fen });
-      }
+      if (opponent) io.to(opponent).emit('opponent-move', { move, fen });
     });
 
     // Завершение игры
     socket.on('game-over', ({ roomId, winner }) => {
       const room = rooms.get(roomId);
       if (!room) return;
-
-      console.log(`🏁 Игра завершена в комнате ${roomId}. Победитель: ${winner}`);
-
-      // Уведомляем всех игроков в комнате
       io.to(roomId).emit('game-ended', { winner });
-
-      // Удаляем комнату через минуту после окончания
       setTimeout(() => {
         rooms.delete(roomId);
         console.log(`🗑️ Комната ${roomId} удалена после окончания игры`);
@@ -174,21 +145,11 @@ app.prepare().then(() => {
     // Отключение игрока
     socket.on('disconnect', () => {
       console.log('❌ Игрок отключился:', socket.id);
-
-      // Находим и обрабатываем все комнаты, где был этот игрок
       rooms.forEach((room, roomId) => {
         const index = room.players.indexOf(socket.id);
         if (index !== -1) {
           room.players.splice(index, 1);
-          
-          console.log(`👋 Игрок ${socket.id} покинул комнату ${roomId}`);
-          
-          // Уведомляем оставшегося игрока
-          if (room.players.length > 0) {
-            io.to(room.players[0]).emit('opponent-disconnected');
-          }
-
-          // Удаляем пустую комнату
+          if (room.players.length > 0) io.to(room.players[0]).emit('opponent-disconnected');
           if (room.players.length === 0) {
             rooms.delete(roomId);
             console.log(`🗑️ Комната ${roomId} удалена (пустая)`);
@@ -197,18 +158,15 @@ app.prepare().then(() => {
       });
     });
 
-    // Дополнительные события для отладки
-    socket.on('ping', () => {
-      socket.emit('pong');
-    });
+    // Отладка
+    socket.on('ping', () => socket.emit('pong'));
   });
 
-  // Запуск сервера
+  // --- Запуск сервера ---
   server.listen(port, (err) => {
     if (err) throw err;
     console.log('='.repeat(50));
     console.log('♟️  ШАХМАТНЫЙ СЕРВЕР ЗАПУЩЕН');
-    console.log('='.repeat(50));
     console.log(`🌐 URL: http://${hostname}:${port}`);
     console.log(`📡 Socket.io: готов к подключениям`);
     console.log(`🔧 Режим: ${dev ? 'Development' : 'Production'}`);
@@ -224,4 +182,3 @@ app.prepare().then(() => {
     });
   });
 });
-
