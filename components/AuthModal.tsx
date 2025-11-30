@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { IoInformationCircleOutline } from 'react-icons/io5';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -186,16 +187,19 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
             <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-md text-sm">
               {error}
               {error.includes('регистрации') && (
-                <div className="mt-2 text-xs text-red-600">
-                  💡 Если регистрация не работает, создайте аккаунт вручную в{' '}
-                  <a
-                    href="https://fra.cloud.appwrite.io/console/project-fra-6927920b001417c61a11/auth"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 underline hover:text-blue-800"
-                  >
-                    Appwrite консоли
-                  </a>
+                <div className="mt-2 text-xs text-red-600 flex items-start gap-1">
+                  <IoInformationCircleOutline className="text-sm mt-0.5 flex-shrink-0" />
+                  <span>
+                    Если регистрация не работает, создайте аккаунт вручную в{' '}
+                    <a
+                      href="https://fra.cloud.appwrite.io/console/project-fra-6927920b001417c61a11/auth"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline hover:text-blue-800"
+                    >
+                      Appwrite консоли
+                    </a>
+                  </span>
                 </div>
               )}
             </div>

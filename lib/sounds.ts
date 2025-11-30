@@ -21,11 +21,8 @@ export class SoundManager {
   private preloadSounds() {
     const soundFiles = [
       { name: 'turn', path: '/sounds/turn.mp3' },
-      { name: 'turn-alt', path: '/sounds/turn.wav' }, // альтернативный формат
       { name: 'win', path: '/sounds/win.mp3' },
-      { name: 'win-alt', path: '/sounds/win.wav' },
       { name: 'fail', path: '/sounds/fail.mp3' },
-      { name: 'fail-alt', path: '/sounds/fail.wav' },
     ];
 
     soundFiles.forEach(({ name, path }) => {
@@ -60,7 +57,7 @@ export class SoundManager {
   private async playSound(name: string): Promise<void> {
     if (!this.enabled) return;
 
-    const audio = this.sounds.get(name) || this.sounds.get(`${name}-alt`);
+    const audio = this.sounds.get(name);
     if (!audio) {
       console.warn(`Звук не найден: ${name}`);
       return;

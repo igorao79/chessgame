@@ -1,0 +1,27 @@
+{
+  "name": "Chessarao - Шахматы онлайн",
+  "short_name": "Chessarao",
+  "description": "Играйте в шахматы онлайн против ИИ или с друзьями",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8B5CF6",
+  "icons": [
+    {
+      "src": "/images/favicon.ico",
+      "sizes": "32x32",
+      "type": "image/x-icon",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/favicon.ico",
+      "sizes": "16x16",
+      "type": "image/x-icon",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "lang": "ru",
+  "dir": "ltr",
+  "orientation": "portrait"
+}

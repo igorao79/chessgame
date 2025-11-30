@@ -8,13 +8,13 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-lg theme-bg-tertiary theme-border-primary border hover:theme-bg-accent transition-colors cursor-pointer"
+      className="p-2 md:p-1 rounded-lg theme-bg-tertiary theme-border-primary border hover:theme-bg-accent transition-colors cursor-pointer"
       title={`Переключить на ${theme === 'light' ? 'темную' : 'светлую'} тему`}
     >
       {theme === 'light' ? (
         // Иконка луны для темной темы
         <svg
-          className="w-5 h-5 theme-text-secondary"
+          className="w-5 h-5 md:w-4 md:h-4 theme-text-secondary"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -29,7 +29,7 @@ export default function ThemeToggle() {
       ) : (
         // Иконка солнца для светлой темы
         <svg
-          className="w-5 h-5 theme-text-secondary"
+          className="w-5 h-5 md:w-4 md:h-4 theme-text-secondary"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

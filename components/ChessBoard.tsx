@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useGame } from '@/contexts/GameContext';
 import { useEffect, useRef } from 'react';
@@ -279,7 +279,7 @@ export default function ChessBoard() {
   }
 
   return (
-    <div className="w-full max-w-[800px]">
+    <div className="w-full max-w-[95vw] md:max-w-[800px]">
       <div
         ref={boardRef}
         id={`chessboard-${gameState.id}`}

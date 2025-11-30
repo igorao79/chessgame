@@ -40,6 +40,7 @@ app.prepare().then(() => {
 
   io.on('connection', (socket) => {
     console.log('✅ Игрок подключился:', socket.id);
+    console.log(`📊 Статистика: Комнат: ${rooms.size}, Подключений: ${io.engine.clientsCount}`);
 
     // Создание новой комнаты
     socket.on('create-room', (callback) => {

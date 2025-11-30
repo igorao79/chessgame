@@ -21,17 +21,17 @@ export default function GameModeSelector() {
   };
 
   return (
-    <div className="theme-bg-primary glassmorphism-selector rounded-xl shadow-xl p-6 max-w-4xl mx-auto min-h-[600px]">
-      <div className="text-center mb-6">
+    <div className="theme-bg-primary glassmorphism-selector rounded-xl shadow-xl p-5 max-w-4xl mx-auto min-h-[480px]">
+      <div className="text-center mb-4">
         <div className="inline-flex items-center justify-center theme-bg-accent theme-text-primary px-6 py-3 rounded-lg text-2xl font-bold shadow-md gap-2">
           <GiChessKing className="text-2xl flex-shrink-0" style={{ marginTop: '-6px' }} />
           <span>Chessarao</span>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {/* Фиксированная высота для каждой секции */}
-        <div className="min-h-[120px] flex flex-col justify-center">
+        <div className="min-h-[100px] flex flex-col justify-center">
           {/* Выбор режима игры всегда видим */}
           <div>
             <label className="block text-base font-semibold theme-text-primary mb-2">
@@ -100,7 +100,7 @@ export default function GameModeSelector() {
           </div>
         </div>
 
-        <div className="min-h-[100px] flex flex-col justify-center">
+        <div className="min-h-[80px] flex flex-col justify-center">
           {/* Выбор цвета - всегда занимает место */}
           <div className={selectedMode === 'online' ? 'invisible' : ''}>
             <label className="block text-base font-semibold theme-text-primary mb-1">
@@ -140,7 +140,7 @@ export default function GameModeSelector() {
           </div>
         </div>
 
-        <div className="min-h-[120px] flex flex-col justify-center">
+        <div className="min-h-[100px] flex flex-col justify-center">
           {/* Выбор сложности - всегда занимает место */}
           <div className={selectedMode !== 'ai' ? 'invisible' : ''}>
             <label className="block text-base font-semibold theme-text-primary mb-1">
@@ -198,9 +198,9 @@ export default function GameModeSelector() {
           </div>
         </div>
 
-        <div className="flex-1 min-h-[160px] flex flex-col justify-center">
+        <div className="flex-1 min-h-[120px] flex flex-col justify-center">
           {/* Место для предупреждения о регистрации */}
-          <div className="mb-3 min-h-[72px]">
+          <div className="mb-2 min-h-[60px]">
             {!isAuthenticated && (
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-start gap-2">
@@ -222,6 +222,18 @@ export default function GameModeSelector() {
             )}
           </div>
 
+          {/* Фиксированное место для примечания об онлайн игре */}
+          <div className="mb-3 min-h-[56px]">
+            {selectedMode === 'online' && isAuthenticated && (
+              <div className="p-3 theme-bg-tertiary theme-border-secondary border rounded-lg">
+                <p className="text-xs theme-text-secondary">
+                  <strong>Примечание:</strong> Для онлайн игры будет создана комната.
+                  Вы сможете поделиться ссылкой с другом.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Кнопка начала игры */}
           <button
             onClick={handleStartGame}
@@ -232,16 +244,6 @@ export default function GameModeSelector() {
               <span>Начать игру</span>
             </div>
           </button>
-
-          {/* Примечание для онлайн игры */}
-          {selectedMode === 'online' && isAuthenticated && (
-            <div className="mt-3 p-3 theme-bg-tertiary theme-border-secondary border rounded-lg">
-              <p className="text-xs theme-text-secondary">
-                <strong>Примечание:</strong> Для онлайн игры будет создана комната.
-                Вы сможете поделиться ссылкой с другом.
-              </p>
-            </div>
-          )}
         </div>
       </div>
 

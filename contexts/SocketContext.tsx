@@ -15,11 +15,23 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
   // Создаём socket instance один раз
   const socket = useMemo(() => {
-    const socketInstance = io(process.env.NEXT_PUBLIC_SOCKET_URL || '', {
-      path: '/socket.io/',
+    // Для локальной разработки всегда используем localhost:3000
+    const socketUrl = process.env.NODE_ENV === 'production' 
+      ? (process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000')
+      : 'http://localhost:3000';
+    console.log('🔌 Creating socket instance for:', socketUrl);
+    
+    const socketInstance = io(socketUrl, {
+      path: '/api/socket',
       transports: ['websocket', 'polling'],
       withCredentials: true,
-      autoConnect: true,
+      autoConnect: false, // Отключаем авто-подключение, будем подключаться вручную
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 3000,
+      reconnectionAttempts: 10,
+      timeout: 10000,
+      forceNew: false
     });
     return socketInstance;
   }, []);
@@ -27,17 +39,52 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Настраиваем обработчики событий
     socket.on('connect', () => {
-      console.log('Socket connected');
+      console.log('✅ Socket connected');
       setIsConnected(true);
     });
 
-    socket.on('disconnect', () => {
-      console.log('Socket disconnected');
+    socket.on('disconnect', (reason) => {
+      console.log('❌ Socket disconnected:', reason);
       setIsConnected(false);
     });
 
+    socket.on('connect_error', (error) => {
+      console.error('❌ Socket connection error:', error.message);
+      setIsConnected(false);
+
+      // Попробуем подключиться через polling если websocket не работает
+      if (error.message.includes('websocket') && socket.io.opts.transports?.[0] === 'websocket') {
+        console.log('🔄 Trying polling transport...');
+        socket.io.opts.transports = ['polling'];
+        setTimeout(() => socket.connect(), 1000);
+      }
+    });
+
+    socket.on('reconnect_attempt', (attempt) => {
+      console.log(`🔄 Reconnection attempt ${attempt}`);
+    });
+
+    socket.on('reconnect', (attempt) => {
+      console.log(`✅ Reconnected after ${attempt} attempts`);
+      setIsConnected(true);
+    });
+
+    socket.on('reconnect_error', (error) => {
+      console.error('❌ Reconnection failed:', error.message);
+    });
+
+    // Подключаемся к серверу
+    console.log('🚀 Connecting to socket server...');
+    socket.connect();
+
+    // Не отключаем socket при размонтировании, чтобы избежать циклов переподключений
     return () => {
-      socket.disconnect();
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('connect_error');
+      socket.off('reconnect_attempt');
+      socket.off('reconnect');
+      socket.off('reconnect_error');
     };
   }, [socket]);
 

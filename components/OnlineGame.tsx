@@ -1,19 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSocket } from '@/contexts/SocketContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { Chess, Square } from 'chess.js';
+import { useGame } from '@/contexts/GameContext';
 import { useSounds } from '@/lib/sounds';
-
-// ChessBoard.js globals
-declare global {
-  interface Window {
-    $: any;
-    jQuery: any;
-    Chessboard: any;
-  }
-}
+import { IoGlobe, IoGameController, IoCheckmarkCircle, IoCopy, IoSadOutline } from 'react-icons/io5';
+import ChessBoard from './ChessBoard';
+import GameInfo from './GameInfo';
+import { useOnlineGameIntegration } from '@/hooks/useOnlineGameIntegration';
 
 interface JoinRoomResponse {
   error?: string;
@@ -21,152 +15,62 @@ interface JoinRoomResponse {
   color?: 'white' | 'black';
 }
 
+
+
 export default function OnlineGame() {
   const { socket, isConnected } = useSocket();
-  const { playTurn, playWin, playFail } = useSounds();
+  const { gameState, startGame, resetGame } = useGame();
+  const { playFail } = useSounds();
+  
   const [roomId, setRoomId] = useState<string>('');
   const [inputRoomId, setInputRoomId] = useState<string>('');
   const [gameStarted, setGameStarted] = useState(false);
-  const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white');
-  const [chess] = useState(new Chess());
-  const [fen, setFen] = useState(chess.fen());
   const [gameStatus, setGameStatus] = useState<string>('');
-  const [moveFrom, setMoveFrom] = useState<string | null>(null);
-  
-  // ChessBoard.js refs
-  const boardRef = useRef<HTMLDivElement>(null);
-  const chessboardRef = useRef<any>(null);
+  const [opponentDisconnected, setOpponentDisconnected] = useState(false);
 
-  // Инициализация ChessBoard.js для онлайн игры
-  useEffect(() => {
-    if (!boardRef.current || !gameStarted) return;
+  const handleOpponentDisconnect = useCallback(() => {
+    setOpponentDisconnected(true);
+    setGameStarted(false);
+    
+    // Сбрасываем игру в GameContext
+    resetGame();
+    
+    playFail();
+    
+    // Через 5 секунд возвращаемся к выбору режима
+    setTimeout(() => {
+      setRoomId('');
+      setOpponentDisconnected(false);
+      setGameStatus('');
+      setGameStarted(false);
+    }, 5000);
+  }, [resetGame, playFail]);
 
-    const loadAndInitBoard = async () => {
-      // Загружаем jQuery и ChessBoard.js
-      if (!window.$) {
-        const jqueryScript = document.createElement('script');
-        jqueryScript.src = 'https://code.jquery.com/jquery-3.7.1.min.js';
-        document.head.appendChild(jqueryScript);
-        await new Promise(resolve => { jqueryScript.onload = resolve; });
-      }
+  // Интеграция с сокетами для онлайн игры
+  useOnlineGameIntegration(roomId, gameStarted);
 
-      if (!document.querySelector('#chessboard-css')) {
-        const cssLink = document.createElement('link');
-        cssLink.id = 'chessboard-css';
-        cssLink.rel = 'stylesheet';
-        cssLink.href = 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css';
-        document.head.appendChild(cssLink);
-      }
-
-      if (!window.Chessboard) {
-        const chessboardScript = document.createElement('script');
-        chessboardScript.src = 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js';
-        document.head.appendChild(chessboardScript);
-        await new Promise(resolve => { chessboardScript.onload = resolve; });
-      }
-
-      // Создаем доску
-      const config = {
-        position: fen,
-        orientation: playerColor,
-        draggable: true,
-        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-        
-        onDragStart: (source: string, piece: string) => {
-          const currentTurn = chess.turn();
-          const isPlayerTurn = (currentTurn === 'w' && playerColor === 'white') || 
-                               (currentTurn === 'b' && playerColor === 'black');
-          
-          if (!isPlayerTurn) return false;
-          
-          const pieceColor = piece.charAt(0);
-          const isPlayerPiece = (playerColor === 'white' && pieceColor === 'w') || 
-                               (playerColor === 'black' && pieceColor === 'b');
-          
-          return isPlayerPiece;
-        },
-        
-        onDrop: (source: string, target: string) => {
-          const success = makeMove(source, target);
-          return success ? null : 'snapback';
-        },
-        
-        onSnapEnd: () => {
-          if (chessboardRef.current) {
-            chessboardRef.current.position(chess.fen());
-          }
-        }
-      };
-
-      chessboardRef.current = window.Chessboard(boardRef.current, config);
-    };
-
-    loadAndInitBoard();
-
-    return () => {
-      if (chessboardRef.current?.destroy) {
-        chessboardRef.current.destroy();
-      }
-    };
-  }, [gameStarted, fen]);
-
+  // Обработка событий socket для основного компонента
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('game-start', ({ roomId, color }) => {
-      setRoomId(roomId);
-      setPlayerColor(color);
+    socket.on('game-start', ({ roomId: newRoomId, color }) => {
       setGameStarted(true);
-      setGameStatus(`${user?.name || 'Игрок'} - игра началась! Вы играете за ${color === 'white' ? 'белых' : 'черных'}`);
-    });
-
-    socket.on('opponent-move', ({ move, fen: newFen }) => {
-      chess.load(newFen);
-      setFen(chess.fen());
-      setGameStatus(`Ход соперника: ${move}`);
-      console.log(`${user?.name || 'Игрок'} - соперник сделал ход: ${move}`);
-
-      // Воспроизводим звук хода противника
-      playTurn();
-
-      // Обновляем позицию на ChessBoard.js доске
-      if (chessboardRef.current) {
-        chessboardRef.current.position(newFen);
-      }
+      setGameStatus('');
+      // Запускаем игру через обычный GameContext
+      startGame('online', color);
+      console.log(`Игра началась! Комната: ${newRoomId}, Цвет: ${color}`);
     });
 
     socket.on('opponent-disconnected', () => {
-      setGameStatus('Соперник отключился');
-      setGameStarted(false);
-    });
-
-    socket.on('game-over', ({ winner }) => {
-      // Воспроизводим звуки когда игра заканчивается от сервера
-      setTimeout(() => {
-        if (winner === 'draw') {
-          console.log('🤝 Ничья!');
-        } else if (winner === playerColor) {
-          playWin();
-        } else {
-          playFail();
-        }
-      }, 500);
-      
-      setGameStatus(`Игра завершена! ${winner === 'draw' ? 'Ничья' : winner === playerColor ? 'Вы победили!' : 'Вы проиграли!'}`);
-    });
-
-    socket.on('game-ended', ({ winner }) => {
-      setGameStatus(`Игра завершена! Победитель: ${winner}`);
+      setGameStatus('Ваш оппонент отключился от игры');
+      handleOpponentDisconnect();
     });
 
     return () => {
       socket.off('game-start');
-      socket.off('opponent-move');
       socket.off('opponent-disconnected');
-      socket.off('game-over');
-      socket.off('game-ended');
     };
-  }, [socket, chess]);
+  }, [socket, startGame, handleOpponentDisconnect]);
 
   const createRoom = () => {
     if (!socket) return;
@@ -185,67 +89,10 @@ export default function OnlineGame() {
         setGameStatus(`Ошибка: ${response.error}`);
       } else {
         setRoomId(inputRoomId);
-        setPlayerColor(response.color || 'white');
+        setGameStatus('Присоединились к комнате! Ожидание начала игры...');
+        // НЕ устанавливаем gameStarted=true пока не придет событие game-start
       }
     });
-  };
-
-  const makeMove = (from: string, to: string) => {
-    const currentTurn = chess.turn();
-    const isPlayerTurn = (currentTurn === 'w' && playerColor === 'white') || 
-                         (currentTurn === 'b' && playerColor === 'black');
-
-    if (!isPlayerTurn) {
-      setGameStatus('Не ваш ход!');
-      return false;
-    }
-
-    try {
-      const move = chess.move({ from, to, promotion: 'q' });
-      if (move) {
-        const newFen = chess.fen();
-        setFen(newFen);
-
-        // Воспроизводим звук собственного хода
-        playTurn();
-
-        // Обновляем позицию на ChessBoard.js доске
-        if (chessboardRef.current) {
-          chessboardRef.current.position(newFen);
-        }
-
-        if (socket && roomId) {
-          socket.emit('move', { roomId, move: move.san, fen: newFen });
-        }
-
-        if (chess.isGameOver()) {
-          const winner = chess.isCheckmate() 
-            ? (chess.turn() === 'w' ? 'black' : 'white')
-            : 'draw';
-          
-          // Воспроизводим звуки победы/поражения
-          setTimeout(() => {
-            if (winner === 'draw') {
-              console.log('🤝 Ничья в онлайн игре!');
-            } else if (winner === playerColor) {
-              playWin();
-            } else {
-              playFail();
-            }
-          }, 500);
-          
-          if (socket && roomId) {
-            socket.emit('game-over', { roomId, winner });
-          }
-        }
-
-        return true;
-      }
-    } catch (error) {
-      console.error('Invalid move:', error);
-    }
-
-    return false;
   };
 
   const copyRoomLink = () => {
@@ -254,95 +101,175 @@ export default function OnlineGame() {
     setGameStatus('Ссылка скопирована в буфер обмена!');
   };
 
+
   if (!isConnected) {
     return (
       <div className="text-center p-8">
+        <div className="animate-spin mx-auto w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
         <p className="text-lg text-gray-600">Подключение к серверу...</p>
+        <p className="text-sm text-gray-500 mt-2">Если подключение не происходит, проверьте что сервер запущен</p>
       </div>
     );
   }
 
   if (!gameStarted && !roomId) {
     return (
-      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">
-          Онлайн игра
-        </h2>
-
-        <div className="space-y-6">
-          <div>
-            <button
-              onClick={createRoom}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg text-xl transition-colors"
-            >
-              🎮 Создать новую комнату
-            </button>
+      <div className="flex items-center justify-center min-h-[80vh]">
+        <div className="theme-bg-primary glassmorphism-selector rounded-xl shadow-xl p-8 max-w-2xl mx-auto">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center theme-bg-accent theme-text-primary px-6 py-3 rounded-lg text-2xl font-bold shadow-md gap-2 mb-4">
+              <IoGlobe className="text-2xl" />
+              <span>Онлайн игра</span>
+            </div>
+            <p className="theme-text-secondary text-sm">
+              Играйте с друзьями по сети в режиме реального времени
+            </p>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex-1 h-px bg-gray-300"></div>
-            <span className="text-gray-500 font-semibold">или</span>
-            <div className="flex-1 h-px bg-gray-300"></div>
-          </div>
-
-          <div>
-            <label className="block text-lg font-semibold text-gray-700 mb-3">
-              Присоединиться к комнате:
-            </label>
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={inputRoomId}
-                onChange={(e) => setInputRoomId(e.target.value)}
-                placeholder="Введите код комнаты"
-                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
+          <div className="space-y-6">
+            <div>
               <button
-                onClick={joinRoom}
-                disabled={!inputRoomId}
-                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                onClick={createRoom}
+                className="w-full theme-button-primary font-bold py-4 px-6 rounded-lg text-lg transition-all hover:shadow-lg"
               >
-                Войти
+                <div className="flex items-center justify-center gap-3">
+                  <IoGameController className="text-xl" />
+                  <span>Создать новую комнату</span>
+                </div>
               </button>
             </div>
-          </div>
-        </div>
 
-        {gameStatus && (
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-center text-blue-800">{gameStatus}</p>
+            <div className="flex items-center gap-4">
+              <div className="flex-1 h-px theme-bg-secondary opacity-30"></div>
+              <span className="theme-text-muted font-semibold text-sm">или</span>
+              <div className="flex-1 h-px theme-bg-secondary opacity-30"></div>
+            </div>
+
+            <div>
+              <label className="block text-base font-semibold theme-text-primary mb-3">
+                Присоединиться к комнате:
+              </label>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={inputRoomId}
+                  onChange={(e) => setInputRoomId(e.target.value)}
+                  placeholder="Введите код комнаты"
+                  className="flex-1 px-4 py-3 border-2 theme-border-primary rounded-lg theme-bg-secondary theme-text-primary placeholder:theme-text-muted focus:theme-border-accent focus:outline-none transition-colors"
+                />
+                <button
+                  onClick={joinRoom}
+                  disabled={!inputRoomId}
+                  className="theme-button-secondary disabled:opacity-50 disabled:cursor-not-allowed font-bold py-3 px-6 rounded-lg transition-all"
+                >
+                  Войти
+                </button>
+              </div>
+            </div>
           </div>
-        )}
+
+          {gameStatus && (
+            <div className="mt-6 p-4 theme-bg-tertiary theme-border-secondary border rounded-lg">
+              <p className="text-center theme-text-secondary text-sm">{gameStatus}</p>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
   if (roomId && !gameStarted) {
     return (
-      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-          Комната создана!
-        </h2>
-
-        <div className="space-y-4">
-          <div className="bg-gray-100 p-4 rounded-lg">
-            <p className="text-sm text-gray-600 mb-2">Код комнаты:</p>
-            <p className="text-3xl font-bold text-center text-gray-800 select-all">
-              {roomId}
-            </p>
+      <div className="flex items-center justify-center min-h-[80vh]">
+        <div className="theme-bg-primary glassmorphism-selector rounded-xl shadow-xl p-8 max-w-lg mx-auto">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center theme-bg-accent theme-text-primary px-6 py-3 rounded-lg text-xl font-bold shadow-md gap-2 mb-4">
+              <IoCheckmarkCircle className="text-xl" />
+              <span>Комната создана!</span>
+            </div>
           </div>
 
-          <button
-            onClick={copyRoomLink}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-          >
-            📋 Скопировать ссылку
-          </button>
+          <div className="space-y-6">
+            <div className="theme-bg-tertiary p-6 rounded-lg border theme-border-secondary">
+              <p className="text-sm theme-text-muted mb-2 text-center">Код комнаты:</p>
+              <p className="text-3xl font-bold text-center theme-text-primary select-all font-mono tracking-wider">
+                {roomId}
+              </p>
+            </div>
 
-          <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-            <p className="text-center text-amber-800">
-              Ожидание второго игрока...
-            </p>
+            <button
+              onClick={copyRoomLink}
+              className="w-full theme-button-primary font-bold py-3 px-6 rounded-lg transition-all hover:shadow-lg"
+            >
+              <div className="flex items-center justify-center gap-2">
+                <IoCopy className="text-lg" />
+                <span>Скопировать ссылку</span>
+              </div>
+            </button>
+
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-700">
+              <div className="flex items-center justify-center gap-3">
+                <div className="animate-pulse">
+                  <div className="w-3 h-3 bg-amber-500 rounded-full animate-bounce"></div>
+                </div>
+                <p className="text-center text-amber-800 dark:text-amber-200 font-medium">
+                  Ожидание второго игрока...
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Экран ожидания когда присоединились к комнате, но игра еще не началась
+  if (roomId && !gameStarted) {
+    return (
+      <div className="flex items-center justify-center min-h-[80vh]">
+        <div className="theme-bg-primary glassmorphism-selector rounded-xl shadow-xl p-8 max-w-lg mx-auto">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center theme-bg-accent theme-text-primary px-6 py-3 rounded-lg text-xl font-bold shadow-md gap-2 mb-4">
+              <IoGlobe className="text-xl" />
+              <span>Присоединились к игре!</span>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="theme-bg-tertiary p-6 rounded-lg border theme-border-secondary">
+              <p className="text-sm theme-text-muted mb-2 text-center">Комната:</p>
+              <p className="text-2xl font-bold text-center theme-text-primary select-all font-mono tracking-wider">
+                {roomId}
+              </p>
+            </div>
+
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+              <div className="flex items-center justify-center gap-3">
+                <div className="animate-pulse">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
+                </div>
+                <p className="text-center text-blue-800 dark:text-blue-200 font-medium">
+                  Ожидание начала игры...
+                </p>
+              </div>
+              {gameStatus && (
+                <p className="text-center text-blue-700 dark:text-blue-300 text-sm mt-2">
+                  {gameStatus}
+                </p>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                setRoomId('');
+                setGameStatus('');
+                setGameStarted(false);
+                setInputRoomId('');
+              }}
+              className="w-full theme-button-secondary font-medium py-2 px-4 rounded-lg text-sm transition-colors"
+            >
+              Выйти из комнаты
+            </button>
           </div>
         </div>
       </div>
@@ -350,44 +277,35 @@ export default function OnlineGame() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">Онлайн игра</h2>
-            <p className="text-gray-600 mt-1">
-              Комната: <span className="font-mono font-bold">{roomId}</span>
-            </p>
-            <p className="text-gray-600">
-              Вы играете за: {playerColor === 'white' ? '⚪ Белых' : '⚫ Черных'}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-lg font-semibold text-gray-700">
-              Ход: {chess.turn() === 'w' ? 'Белые' : 'Черные'}
-            </p>
+    <div className="max-w-7xl mx-auto">
+      {/* Уведомление об отключении оппонента */}
+      {opponentDisconnected && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="theme-bg-primary glassmorphism-selector rounded-xl shadow-2xl p-8 max-w-md mx-4">
+            <div className="text-center">
+              <div className="text-6xl mb-4 flex justify-center">
+                <IoSadOutline className="text-red-500" />
+              </div>
+              <h3 className="text-xl font-bold theme-text-primary mb-2">
+                Оппонент отключился
+              </h3>
+              <p className="theme-text-secondary mb-4">
+                Ваш оппонент покинул игру. Через несколько секунд вы вернетесь к выбору режима.
+              </p>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: '100%' }}></div>
+              </div>
+            </div>
           </div>
         </div>
+      )}
 
-        {gameStatus && (
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-center text-blue-800">{gameStatus}</p>
-          </div>
-        )}
-      </div>
-
-      <div className="w-full max-w-[600px] mx-auto">
-        <div 
-          ref={boardRef}
-          id={`online-chessboard-${roomId || 'waiting'}`}
-          style={{ 
-            width: '100%',
-            borderRadius: '8px',
-            boxShadow: '0 5px 15px rgba(0, 0, 0, 0.5)',
-            overflow: 'hidden'
-          }}
-        />
-      </div>
+      {gameStarted && gameState && (
+        <div className="flex items-start justify-start gap-8">
+          <GameInfo />
+          <ChessBoard />
+        </div>
+      )}
     </div>
   );
 }
