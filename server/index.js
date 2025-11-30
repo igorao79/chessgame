@@ -1,3 +1,4 @@
+// server.js
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
@@ -10,93 +11,53 @@ const port = parseInt(process.env.PORT || '3000', 10);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
-// Хранилище активных комнат в памяти
+// Хранилище комнат
 const rooms = new Map();
 
 app.prepare().then(() => {
-  // Настраиваем CORS middleware для Express перед Socket.IO
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'https://chessgame-delta-five.vercel.app');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Cache-Control');
-    res.header('Access-Control-Allow-Credentials', 'false');
-
-    if (req.method === 'OPTIONS') {
-      res.sendStatus(200);
-      return;
-    }
-    next();
-  });
-
-  // Создаём HTTP сервер
   const server = createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url, true);
 
-      // Health check endpoint
+      // Health check
       if (parsedUrl.pathname === '/api/health') {
         res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Access-Control-Allow-Origin', 'https://chessgame-delta-five.vercel.app');
         res.end(JSON.stringify({
           status: 'ok',
           timestamp: new Date().toISOString(),
-          rooms: rooms.size,
-          connections: io ? io.engine.clientsCount : 0
+          rooms: rooms.size
         }));
-        return;
-      }
-
-      // Пропускаем маршруты Socket.io - Express middleware обработает их
-      if (parsedUrl.pathname && parsedUrl.pathname.startsWith('/socket.io')) {
-        // Socket.io сам обработает этот маршрут через Express
         return;
       }
 
       // Остальные маршруты Next.js
       await handle(req, res, parsedUrl);
     } catch (err) {
-      console.error('Error occurred handling', req.url, err);
+      console.error('Error handling', req.url, err);
       res.statusCode = 500;
       res.end('internal server error');
     }
   });
 
-  // Инициализация Socket.io с правильными CORS
+  // Socket.IO
   const io = new Server(server, {
     cors: {
-      origin: 'https://chessgame-delta-five.vercel.app',
-      methods: ['GET', 'POST'],
-      credentials: false
+      origin: 'https://chessgame-delta-five.vercel.app', // твой фронтенд
+      methods: ['GET', 'POST']
     },
-    allowEIO3: true,
-    // Дополнительные настройки для polling
-    transports: ['polling', 'websocket'],
-    allowUpgrades: true,
-    cookie: false
+    transports: ['websocket'] // отключаем polling
   });
 
-  // Дополнительный CORS middleware для Socket.IO engine
-  io.engine.on('headers', (headers, req) => {
-    headers['Access-Control-Allow-Origin'] = 'https://chessgame-delta-five.vercel.app';
-    headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
-    headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Cache-Control';
-    headers['Access-Control-Allow-Credentials'] = 'false';
-  });
-
-  console.log('Socket.io сервер инициализирован');
-
-  // --- Socket.io события ---
   io.on('connection', (socket) => {
     console.log('✅ Игрок подключился:', socket.id);
-    console.log(`📊 Статистика: Комнат: ${rooms.size}, Подключений: ${io.engine.clientsCount}`);
 
-    // Создание новой комнаты
+    // Создание комнаты
     socket.on('create-room', (callback) => {
       const roomId = Math.random().toString(36).substring(7);
       const roomData = { players: [socket.id], gameState: null, createdAt: new Date().toISOString() };
       rooms.set(roomId, roomData);
       socket.join(roomId);
-      console.log(`🎮 Комната создана: ${roomId} игроком ${socket.id}`);
+      console.log(`🎮 Комната создана: ${roomId}`);
       callback({ roomId });
     });
 
@@ -109,19 +70,16 @@ app.prepare().then(() => {
       room.players.push(socket.id);
       socket.join(roomId);
 
-      console.log(`✅ Игрок ${socket.id} присоединился к комнате ${roomId}`);
-
-      // Назначаем цвета
       const playerColors = {
         [room.players[0]]: 'white',
-        [room.players[1]]: 'black',
+        [room.players[1]]: 'black'
       };
 
       room.players.forEach((playerId) => {
         io.to(playerId).emit('game-start', {
           roomId,
           color: playerColors[playerId],
-          opponent: room.players.find((p) => p !== playerId),
+          opponent: room.players.find((p) => p !== playerId)
         });
       });
 
@@ -142,49 +100,28 @@ app.prepare().then(() => {
       const room = rooms.get(roomId);
       if (!room) return;
       io.to(roomId).emit('game-ended', { winner });
-      setTimeout(() => {
-        rooms.delete(roomId);
-        console.log(`🗑️ Комната ${roomId} удалена после окончания игры`);
-      }, 60000);
+      setTimeout(() => rooms.delete(roomId), 60000);
     });
 
     // Отключение игрока
     socket.on('disconnect', () => {
-      console.log('❌ Игрок отключился:', socket.id);
       rooms.forEach((room, roomId) => {
-        const index = room.players.indexOf(socket.id);
-        if (index !== -1) {
-          room.players.splice(index, 1);
+        const idx = room.players.indexOf(socket.id);
+        if (idx !== -1) {
+          room.players.splice(idx, 1);
           if (room.players.length > 0) io.to(room.players[0]).emit('opponent-disconnected');
-          if (room.players.length === 0) {
-            rooms.delete(roomId);
-            console.log(`🗑️ Комната ${roomId} удалена (пустая)`);
-          }
+          if (room.players.length === 0) rooms.delete(roomId);
         }
       });
+      console.log('❌ Игрок отключился:', socket.id);
     });
-
-    // Отладка
-    socket.on('ping', () => socket.emit('pong'));
   });
 
-  // --- Запуск сервера ---
-  server.listen(port, (err) => {
-    if (err) throw err;
+  server.listen(port, () => {
     console.log('='.repeat(50));
     console.log('♟️  ШАХМАТНЫЙ СЕРВЕР ЗАПУЩЕН');
     console.log(`🌐 URL: http://${hostname}:${port}`);
-    console.log(`📡 Socket.io: готов к подключениям`);
-    console.log(`🔧 Режим: ${dev ? 'Development' : 'Production'}`);
+    console.log('📡 Socket.io: готов к подключениям (WebSocket only)');
     console.log('='.repeat(50));
-  });
-
-  // Graceful shutdown
-  process.on('SIGTERM', () => {
-    console.log('SIGTERM получен, закрываю сервер...');
-    server.close(() => {
-      console.log('Сервер закрыт');
-      process.exit(0);
-    });
   });
 });
