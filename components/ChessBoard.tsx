@@ -160,7 +160,7 @@ export default function ChessBoard() {
         },
 
         // Тема фигур - используем несколько источников с fallback
-        pieceTheme: function(piece) {
+        pieceTheme: function(piece: string) {
           // Пробуем несколько источников
           const sources = [
             'https://chessboardjs.com/img/chesspieces/wikipedia/' + piece + '.png',
