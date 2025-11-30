@@ -14,27 +14,29 @@ const handle = app.getRequestHandler();
 const rooms = new Map();
 
 app.prepare().then(() => {
+  // Настраиваем CORS middleware для Express перед Socket.IO
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', 'https://chessgame-delta-five.vercel.app');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Cache-Control');
+    res.header('Access-Control-Allow-Credentials', 'false');
+
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(200);
+      return;
+    }
+    next();
+  });
+
   // Создаём HTTP сервер
   const server = createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url, true);
 
-      // CORS headers для всех запросов
-      res.setHeader('Access-Control-Allow-Origin', 'https://chessgame-delta-five.vercel.app');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-      res.setHeader('Access-Control-Allow-Credentials', 'false');
-
-      // CORS preflight
-      if (req.method === 'OPTIONS') {
-        res.statusCode = 200;
-        res.end();
-        return;
-      }
-
       // Health check endpoint
       if (parsedUrl.pathname === '/api/health') {
         res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', 'https://chessgame-delta-five.vercel.app');
         res.end(JSON.stringify({
           status: 'ok',
           timestamp: new Date().toISOString(),
@@ -44,9 +46,9 @@ app.prepare().then(() => {
         return;
       }
 
-      // Пропускаем маршруты Socket.io
+      // Пропускаем маршруты Socket.io - Express middleware обработает их
       if (parsedUrl.pathname && parsedUrl.pathname.startsWith('/socket.io')) {
-        // Socket.io сам обработает этот маршрут
+        // Socket.io сам обработает этот маршрут через Express
         return;
       }
 
@@ -59,12 +61,26 @@ app.prepare().then(() => {
     }
   });
 
-  // Инициализация Socket.io
+  // Инициализация Socket.io с правильными CORS
   const io = new Server(server, {
     cors: {
       origin: 'https://chessgame-delta-five.vercel.app',
-      methods: ['GET', 'POST']
-    }
+      methods: ['GET', 'POST'],
+      credentials: false
+    },
+    allowEIO3: true,
+    // Дополнительные настройки для polling
+    transports: ['polling', 'websocket'],
+    allowUpgrades: true,
+    cookie: false
+  });
+
+  // Дополнительный CORS middleware для Socket.IO engine
+  io.engine.on('headers', (headers, req) => {
+    headers['Access-Control-Allow-Origin'] = 'https://chessgame-delta-five.vercel.app';
+    headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
+    headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Cache-Control';
+    headers['Access-Control-Allow-Credentials'] = 'false';
   });
 
   console.log('Socket.io сервер инициализирован');
