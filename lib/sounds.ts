@@ -7,8 +7,10 @@ export class SoundManager {
   private enabled: boolean = true;
 
   private constructor() {
-    // Предзагружаем звуки
-    this.preloadSounds();
+    // Предзагружаем звуки только в браузере
+    if (typeof window !== 'undefined') {
+      this.preloadSounds();
+    }
   }
 
   static getInstance(): SoundManager {
@@ -19,6 +21,12 @@ export class SoundManager {
   }
 
   private preloadSounds() {
+    // Проверяем доступность Audio API
+    if (typeof Audio === 'undefined') {
+      console.warn('Audio API недоступен в данной среде');
+      return;
+    }
+
     const soundFiles = [
       { name: 'turn', path: '/sounds/turn.mp3' },
       { name: 'win', path: '/sounds/win.mp3' },
@@ -30,7 +38,7 @@ export class SoundManager {
         const audio = new Audio(path);
         audio.volume = this.volume;
         audio.preload = 'auto';
-        
+
         // Обработка ошибок загрузки
         audio.addEventListener('error', () => {
           console.warn(`Не удалось загрузить звук: ${path}`);
@@ -57,6 +65,9 @@ export class SoundManager {
   private async playSound(name: string): Promise<void> {
     if (!this.enabled) return;
 
+    // Проверяем что мы в браузере
+    if (typeof window === 'undefined') return;
+
     const audio = this.sounds.get(name);
     if (!audio) {
       console.warn(`Звук не найден: ${name}`);
@@ -66,7 +77,7 @@ export class SoundManager {
     try {
       // Сбрасываем позицию воспроизведения
       audio.currentTime = 0;
-      
+
       // Воспроизводим звук
       await audio.play();
     } catch (error) {
