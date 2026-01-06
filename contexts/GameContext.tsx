@@ -9,6 +9,8 @@ import { useSounds } from '@/lib/sounds';
 interface GameContextType {
   gameState: GameState | null;
   chess: Chess | null;
+  isHighlightEnabled: boolean;
+  setIsHighlightEnabled: (enabled: boolean) => void;
   startGame: (mode: GameMode, playerColor?: PlayerColor, difficulty?: Difficulty) => void;
   makeMove: (move: Move) => boolean;
   applyOpponentMove: (fen: string, move: string) => boolean;
@@ -21,6 +23,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 export function GameProvider({ children }: { children: ReactNode }) {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [chess, setChess] = useState<Chess | null>(null);
+  const [isHighlightEnabled, setIsHighlightEnabled] = useState(true);
   const aiThinkingRef = useRef(false);
   const { playTurn, playWin, playFail } = useSounds();
 
@@ -248,6 +251,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       value={{
         gameState,
         chess,
+        isHighlightEnabled,
+        setIsHighlightEnabled,
         startGame,
         makeMove,
         applyOpponentMove,

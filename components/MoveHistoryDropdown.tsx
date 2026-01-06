@@ -38,10 +38,9 @@ export default function MoveHistoryDropdown({ isOpen, onToggle, triggerRef }: Mo
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="absolute top-0 right-0 z-50 w-64 max-h-96 theme-bg-primary rounded-lg shadow-xl theme-border-secondary border overflow-hidden"
+          className="absolute top-full left-1/2 z-50 w-64 max-h-96 theme-bg-primary rounded-lg shadow-xl theme-border-secondary border overflow-hidden mt-2"
           style={{
-            transform: 'translateX(calc(100% + 8px))',
-            marginTop: '0'
+            transform: 'translateX(-50%)',
           }}
         >
           {/* Заголовок */}

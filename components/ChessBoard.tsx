@@ -5,7 +5,7 @@ import { useState, useCallback } from 'react';
 import { Chessboard } from 'react-chessboard';
 
 export default function ChessBoard() {
-  const { gameState, makeMove, isPlayerTurn, chess } = useGame();
+  const { gameState, makeMove, isPlayerTurn, chess, isHighlightEnabled } = useGame();
   const [optionSquares, setOptionSquares] = useState<{[square: string]: { background: string, borderRadius?: string }}>({});
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
 
@@ -60,12 +60,12 @@ export default function ChessBoard() {
       return false;
     }
 
-    // Показываем возможные ходы
-    const newSquares = getMoveSquares(sourceSquare);
+    // Показываем возможные ходы (если подсветка включена)
+    const newSquares = isHighlightEnabled ? getMoveSquares(sourceSquare) : {};
     setOptionSquares(newSquares);
 
     return true;
-  }, [isPlayerTurn, chess, gameState, getMoveSquares]);
+  }, [isPlayerTurn, chess, gameState, getMoveSquares, isHighlightEnabled]);
 
   // Обработчик клика по клетке (для click-to-move)
   const onSquareClick = useCallback((square: string) => {
@@ -103,8 +103,8 @@ export default function ChessBoard() {
       if (piece && ((piece.color === 'w' && gameState.playerColor === 'white') ||
                     (piece.color === 'b' && gameState.playerColor === 'black'))) {
         setSelectedSquare(square);
-        // Показываем возможные ходы
-        const newSquares = getMoveSquares(square);
+        // Показываем возможные ходы (если подсветка включена)
+        const newSquares = isHighlightEnabled ? getMoveSquares(square) : {};
         setOptionSquares(newSquares);
       } else {
         // Клик в пустом месте - снимаем любое возможное выделение
@@ -112,7 +112,7 @@ export default function ChessBoard() {
         setOptionSquares({});
       }
     }
-  }, [selectedSquare, isPlayerTurn, chess, gameState, makeMove, getMoveSquares]);
+  }, [selectedSquare, isPlayerTurn, chess, gameState, makeMove, getMoveSquares, isHighlightEnabled]);
 
   // Обработчик клика по фигуре
   const onPieceClick = useCallback((piece: string, square: string) => {
