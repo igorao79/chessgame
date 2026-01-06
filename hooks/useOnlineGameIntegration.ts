@@ -23,12 +23,12 @@ export function useOnlineGameIntegration(roomId: string, isOnlineMode: boolean) 
       // Если это новый ход (не тот же что был в прошлый раз)
       if (lastMove !== lastMoveRef.current && chess) {
         lastMoveRef.current = lastMove;
-        
+
         // Отправляем ход на сервер
-        socket.emit('move', { 
-          roomId, 
-          move: lastMove, 
-          fen: gameState.fen 
+        socket.emit('move', {
+          roomId,
+          move: lastMove,
+          fen: chess.fen()
         });
 
         // Проверяем окончание игры

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { Chess, Square } from 'chess.js';
 import { GameState, GameMode, PlayerColor, Difficulty, Move, GameStatus } from '@/types/game';
 import { getBestMove } from '@/lib/chess-ai';
@@ -21,6 +21,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 export function GameProvider({ children }: { children: ReactNode }) {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [chess, setChess] = useState<Chess | null>(null);
+  const aiThinkingRef = useRef(false);
   const { playTurn, playWin, playFail } = useSounds();
 
   const makeAIMove = useCallback((chessInstance: Chess, state: GameState) => {
@@ -52,7 +53,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
           if (newState.status === 'finished') {
             setTimeout(() => {
               if (newState.winner === 'draw') {
-                console.log('🤝 Ничья!');
               } else if (newState.winner === prev.playerColor) {
                 playWin();
               } else {
@@ -86,8 +86,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       // Если AI играет белыми, делаем первый ход
       if (mode === 'ai' && playerColor === 'black') {
+        aiThinkingRef.current = true;
         setTimeout(() => {
           makeAIMove(newChess, newGameState);
+          aiThinkingRef.current = false;
         }, 500);
       }
     },
@@ -98,27 +100,40 @@ export function GameProvider({ children }: { children: ReactNode }) {
     (move: Move): boolean => {
       if (!chess || !gameState) return false;
 
-      try {
-        // Проверяем, требуется ли превращение пешки
-        const piece = chess.get(move.from as Square);
-        const isPawnPromotion = piece && piece.type === 'p' &&
-          ((piece.color === 'w' && move.to[1] === '8') ||
-           (piece.color === 'b' && move.to[1] === '1'));
+      // Предварительная проверка хода
+      const possibleMoves = chess.moves({ square: move.from as any, verbose: true });
+      const isValidMove = possibleMoves.some(m => m.to === move.to);
 
-        const result = chess.move({
-          from: move.from as Square,
-          to: move.to as Square,
-          promotion: isPawnPromotion ? (move.promotion || 'q') : undefined,
-        });
+      if (!isValidMove) {
+        return false;
+      }
 
-        if (result) {
-          // Воспроизводим звук хода
-          playTurn();
+      // Проверяем, требуется ли превращение пешки
+      const piece = chess.get(move.from as Square);
+      const isPawnPromotion = piece && piece.type === 'p' &&
+        ((piece.color === 'w' && move.to[1] === '8') ||
+         (piece.color === 'b' && move.to[1] === '1'));
+
+      const result = chess.move({
+        from: move.from as Square,
+        to: move.to as Square,
+        promotion: isPawnPromotion ? (move.promotion || 'q') : undefined,
+      });
+
+      if (result) {
+        // Воспроизводим звук хода
+        playTurn();
+
+        const newFen = chess.fen();
+
+        // Синхронизируем gameState через функцию обновления
+        setGameState(prev => {
+          if (!prev) return prev;
 
           const newGameState: GameState = {
-            ...gameState,
-            fen: chess.fen(),
-            moves: [...gameState.moves, result.san],
+            ...prev,
+            fen: newFen,
+            moves: [...prev.moves, result.san],
             currentTurn: chess.turn() === 'w' ? 'white' : 'black',
             status: chess.isGameOver() ? 'finished' : 'playing',
             winner: chess.isCheckmate()
@@ -130,14 +145,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
               : undefined,
           };
 
-          setGameState(newGameState);
-
           // Воспроизводим звуки победы/поражения
           if (newGameState.status === 'finished') {
             if (newGameState.winner === 'draw') {
               // При ничьей можем играть нейтральный звук или тишину
-              console.log('🤝 Ничья!');
-            } else if (newGameState.winner === gameState.playerColor) {
+            } else if (newGameState.winner === prev.playerColor) {
               // Игрок победил
               setTimeout(() => playWin(), 500);
             } else {
@@ -146,38 +158,49 @@ export function GameProvider({ children }: { children: ReactNode }) {
             }
           }
 
-          // Если игра против AI и не конец игры, делаем ход AI
+          // AI ходит ТОЛЬКО после хода игрока, когда очередь НЕ игрока
+          // НЕ ходим после AI хода!
+          const aiColor = prev.playerColor === 'white' ? 'b' : 'w';
+          const isAfterPlayerMove = prev.currentTurn === prev.playerColor;
+
           if (
-            gameState.mode === 'ai' &&
+            prev.mode === 'ai' &&
             !chess.isGameOver() &&
-            chess.turn() !== (gameState.playerColor === 'white' ? 'w' : 'b')
+            chess.turn() === aiColor &&
+            isAfterPlayerMove &&
+            !aiThinkingRef.current
           ) {
+            aiThinkingRef.current = true;
             setTimeout(() => {
               makeAIMove(chess, newGameState);
+              aiThinkingRef.current = false;
             }, 500);
+          } else {
           }
 
-          return true;
-        }
-      } catch (error) {
-        console.error('Invalid move:', error);
+          return newGameState;
+        });
+
+        // Важно: возвращаем true СРАЗУ после успешного хода
+        return true;
       }
 
       return false;
     },
-    [chess, gameState, makeAIMove, playTurn, playWin, playFail]
+    [chess, gameState, makeAIMove]
   );
 
   const resetGame = useCallback(() => {
     setChess(null);
     setGameState(null);
+    aiThinkingRef.current = false;
   }, []);
 
   const applyOpponentMove = useCallback((fen: string, move: string): boolean => {
     if (!gameState || !chess) return false;
 
     try {
-      // Устанавливаем позицию из FEN
+      // Загружаем позицию из FEN в существующий экземпляр
       chess.load(fen);
 
       // Обновляем состояние игры
@@ -186,7 +209,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
         const newState = {
           ...prev,
-          fen: chess.fen(),
+          fen: fen,
           moves: [...prev.moves, move],
           currentTurn: (chess.turn() === 'w' ? 'white' : 'black') as PlayerColor,
           status: chess.isGameOver() ? ('finished' as GameStatus) : ('playing' as GameStatus),

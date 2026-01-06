@@ -177,3 +177,70 @@ body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
+
+/* Убираем ghost image при drag & drop в chessboard */
+.chessboard img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Дополнительные правила для предотвращения ghost image */
+.chessboard img:active,
+.chessboard img:focus {
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
+}
+
+/* Предотвращаем создание ghost image на всех img в chessboard */
+.chessboard img {
+  -webkit-user-drag: none !important;
+  user-drag: none !important;
+  pointer-events: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+/* Полностью отключаем drag для всех элементов доски */
+.chessboard *,
+.chessboard img,
+.chessboard svg,
+.chessboard [data-square],
+.chessboard [data-piece] {
+  -webkit-user-drag: none !important;
+  user-drag: none !important;
+  pointer-events: none !important;
+}
+
+/* Всегда используем обычный курсор на шахматной доске */
+.chessboard,
+.chessboard *,
+.chessboard [role="region"],
+.chessboard [data-board],
+.chessboard [data-square],
+.chessboard svg,
+.chessboard img {
+  cursor: default !important;
+}
+
+/* Глобально отключаем drag изображения для всех изображений */
+* {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+img, svg, canvas {
+  -webkit-user-drag: none !important;
+  user-drag: none !important;
+  pointer-events: none !important;
+}
+

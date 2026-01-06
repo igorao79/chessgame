@@ -1,296 +1,160 @@
 'use client';
 
 import { useGame } from '@/contexts/GameContext';
-import { useEffect, useRef } from 'react';
-
-// Импортируем ChessBoard.js и jQuery
-declare global {
-  interface Window {
-    $: any;
-    jQuery: any;
-    Chessboard: any;
-  }
-}
+import { useState, useCallback } from 'react';
+import { Chessboard } from 'react-chessboard';
 
 export default function ChessBoard() {
-  const { gameState, chess, makeMove, isPlayerTurn } = useGame();
-  const boardRef = useRef<HTMLDivElement>(null);
-  const chessboardRef = useRef<any>(null);
+  const { gameState, makeMove, isPlayerTurn, chess } = useGame();
+  const [optionSquares, setOptionSquares] = useState<{[square: string]: { background: string, borderRadius?: string }}>({});
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
 
-  // Получить возможные ходы для выбранной фигуры
-  const getPossibleMoves = (from: string): string[] => {
+
+
+
+
+  // Получить возможные ходы для фигуры
+  const getPossibleMoves = useCallback((from: string): string[] => {
     if (!chess) return [];
 
     try {
       const moves = chess.moves({ square: from as any, verbose: true });
-      return moves.map(move => move.to).filter(to => to !== null) as string[];
+      return moves.map(move => move.to).filter(to => to !== null && to !== undefined) as string[];
     } catch {
       return [];
     }
-  };
+  }, [chess]);
 
-  // Подсветить квадраты
-  const highlightSquares = (squares: string[]) => {
-    if (!chessboardRef.current || !boardRef.current) return;
+  // Получить квадраты для подсветки
+  const getMoveSquares = useCallback((square: string) => {
+    const moves = getPossibleMoves(square);
+    const newSquares: {[square: string]: { background: string, borderRadius?: string }} = {};
 
-    // Очищаем старую подсветку
-    const $board = window.$(`#${boardRef.current.id}`);
-    $board.find('.square-55d63').removeClass('highlight-square');
-
-    // Добавляем новую подсветку
-    squares.forEach(square => {
-      $board.find(`.square-${square}`).addClass('highlight-square');
+    moves.forEach(move => {
+      newSquares[move] = {
+        background: "rgba(0, 255, 0, 0.4)"
+      };
     });
-  };
 
-  // Очистить подсветку
-  const clearHighlights = () => {
-    if (boardRef.current) {
-      const $board = window.$(`#${boardRef.current.id}`);
-      $board.find('.square-55d63').removeClass('highlight-square');
-    }
-  };
-
-  // Инициализация доски
-  useEffect(() => {
-    if (!boardRef.current || !gameState || !chess) return;
-
-    // Подключаем jQuery и ChessBoard.js
-    const loadScripts = async () => {
-      // jQuery
-      if (!window.$) {
-        const jqueryScript = document.createElement('script');
-        jqueryScript.src = 'https://code.jquery.com/jquery-3.7.1.min.js';
-        document.head.appendChild(jqueryScript);
-        await new Promise(resolve => {
-          jqueryScript.onload = resolve;
-        });
-      }
-
-      // ChessBoard.js CSS
-      if (!document.querySelector('#chessboard-css')) {
-        const cssLink = document.createElement('link');
-        cssLink.id = 'chessboard-css';
-        cssLink.rel = 'stylesheet';
-        cssLink.href = 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css';
-        document.head.appendChild(cssLink);
-      }
-
-      // ChessBoard.js
-      if (!window.Chessboard) {
-        const chessboardScript = document.createElement('script');
-        chessboardScript.src = 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js';
-        document.head.appendChild(chessboardScript);
-        await new Promise(resolve => {
-          chessboardScript.onload = resolve;
-        });
-      }
+    newSquares[square] = {
+      background: "rgba(255, 255, 0, 0.4)"
     };
 
-    loadScripts().then(() => {
-      if (!window.Chessboard || !boardRef.current) return;
+    return newSquares;
+  }, [getPossibleMoves]);
 
-      // Конфигурация доски
-      const config = {
-        position: gameState.fen,
-        orientation: gameState.playerColor === 'white' ? 'white' : 'black',
-        draggable: true,
-        dropOffBoard: 'snapback',
-        responsive: true, // Адаптивная доска для мобильных устройств
 
-        // Начало перетаскивания - показываем возможные ходы
-        onDragStart: (source: string, piece: string) => {
-          // Проверяем очередь хода
-          if (!isPlayerTurn()) return false;
+  // Обработчик начала перетаскивания
+  const onPieceDragBegin = useCallback((piece: string, sourceSquare: string) => {
+    if (!isPlayerTurn() || !chess || !gameState) {
+      return false;
+    }
 
-          // Проверяем, что фигура принадлежит игроку
-          const playerColor = gameState.playerColor;
-          const pieceColor = piece.charAt(0);
-          const isPlayerPiece = (playerColor === 'white' && pieceColor === 'w') ||
-                               (playerColor === 'black' && pieceColor === 'b');
+    // Проверяем, что фигура принадлежит игроку
+    const playerColor = gameState.playerColor;
+    const pieceColor = piece.charAt(0);
+    const isPlayerPiece = (playerColor === 'white' && pieceColor === 'w') ||
+                         (playerColor === 'black' && pieceColor === 'b');
 
-          if (!isPlayerPiece) return false;
+    if (!isPlayerPiece) {
+      return false;
+    }
 
-          // Показываем возможные ходы
-          const moves = getPossibleMoves(source);
-          highlightSquares([source, ...moves]);
+    // Показываем возможные ходы
+    const newSquares = getMoveSquares(sourceSquare);
+    setOptionSquares(newSquares);
 
-          console.log('🟡 Drag start:', source, 'Possible moves:', moves);
-          return true;
-        },
+    return true;
+  }, [isPlayerTurn, chess, gameState, getMoveSquares]);
 
-        // Во время перетаскивания - поддерживаем подсветку
-        onDragMove: (newLocation: string, oldLocation: string, source: string) => {
-          // Подсветка остается активной во время перетаскивания
-          console.log('🔄 Dragging...', source);
-        },
+  // Обработчик клика по клетке (для click-to-move)
+  const onSquareClick = useCallback((square: string) => {
+    if (!isPlayerTurn() || !chess || !gameState) return;
 
-        // Отпускание фигуры - проверяем и выполняем ход
-        onDrop: (source: string, target: string, piece: string) => {
-          console.log('🎯 Drop attempt:', source, 'to', target);
-
-          // Очищаем подсветку
-          clearHighlights();
-
-          // Проверяем, что ход возможен
-          const possibleMoves = getPossibleMoves(source);
-          if (!possibleMoves.includes(target)) {
-            console.log('❌ Invalid move:', source, 'to', target);
-            return 'snapback';
-          }
-
-          // Выполняем ход
+    if (selectedSquare) {
+      // Если уже выбрана клетка
+      if (selectedSquare !== square) {
+        // Проверяем, является ли кликнутая клетка валидным ходом
+        const possibleMoves = getPossibleMoves(selectedSquare);
+        if (possibleMoves.includes(square)) {
+          // Валидный ход - выполняем
           const success = makeMove({
-            from: source,
-            to: target,
+            from: selectedSquare,
+            to: square,
           });
 
-          console.log('✅ Move result:', success);
-
-          // Если ход не выполнился, возвращаем фигуру обратно
-          return success ? null : 'snapback';
-        },
-
-        // После завершения анимации
-        onSnapEnd: () => {
-          // Обновляем позицию на доске
-          if (chessboardRef.current && chess) {
-            chessboardRef.current.position(chess.fen());
+          if (success) {
+            setSelectedSquare(null);
+            setOptionSquares({});
           }
-          console.log('🏁 Snap end - position updated');
-        },
-
-        // Тема фигур - используем несколько источников с fallback
-        pieceTheme: function(piece: string) {
-          // Пробуем несколько источников
-          const sources = [
-            'https://chessboardjs.com/img/chesspieces/wikipedia/' + piece + '.png',
-            'https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/merida/' + piece + '.png',
-            'https://images.chesscomfiles.com/chess-themes/pieces/neo/150/' + piece + '.png',
-            'https://chessboardjs.com/img/chesspieces/alpha/' + piece + '.png'
-          ];
-          // Возвращаем первый источник (ChessBoard.js попробует остальные при ошибке)
-          return sources[0];
+        } else {
+          // Не валидный ход - отменяем выделение
+          setSelectedSquare(null);
+          setOptionSquares({});
         }
-      };
-
-      // Создаем доску
-      chessboardRef.current = window.Chessboard(boardRef.current, config);
-
-      // Добавляем кастомные стили для подсветки
-      if (!document.querySelector('#chess-highlight-styles')) {
-        const style = document.createElement('style');
-        style.id = 'chess-highlight-styles';
-        style.textContent = `
-          .highlight-square {
-            background-color: rgba(0, 255, 0, 0.4) !important;
-            box-shadow: inset 0 0 0 3px rgba(0, 255, 0, 0.8) !important;
-            border-radius: 3px !important;
-          }
-
-          .square-55d63:hover {
-            background-color: rgba(255, 255, 0, 0.2) !important;
-          }
-
-          /* Убираем overflow: hidden чтобы фигуры не обрезались при перетаскивании */
-          .board-b72b1,
-          .board-b72b1 * {
-            overflow: visible !important;
-          }
-
-          /* Дополнительные селекторы для ChessBoard.js */
-          [class*="board-"] {
-            overflow: visible !important;
-          }
-
-          [class*="board-"] * {
-            overflow: visible !important;
-          }
-
-          /* Более специфичные правила для предотвращения обрезки фигур */
-          .square-55d63 {
-            overflow: visible !important;
-          }
-
-          .piece-417db {
-            overflow: visible !important;
-            z-index: 1000 !important;
-          }
-
-          /* Во время перетаскивания фигуры должны быть над всем */
-          .ui-draggable-dragging {
-            overflow: visible !important;
-            z-index: 9999 !important;
-            pointer-events: none !important;
-          }
-
-          /* Контейнер доски */
-          div[id^="chessboard-"] {
-            overflow: visible !important;
-          }
-
-
-          /* Специфично для перетаскиваемых элементов */
-          .ui-draggable {
-            overflow: visible !important;
-          }
-
-          /* Предотвращаем обрезку на всех уровнях */
-          .chessboard-63f37,
-          .chessboard-63f37 *,
-          .board-b72b1,
-          .board-b72b1 *,
-          .square-55d63,
-          .square-55d63 * {
-            overflow: visible !important;
-          }
-        `;
-        document.head.appendChild(style);
+      } else {
+        // Клик по той же клетке - снимаем выделение
+        setSelectedSquare(null);
+        setOptionSquares({});
       }
+    } else {
+      // Проверяем, есть ли фигура на клетке и можем ли мы ее выбрать
+      const piece = chess.get(square as any);
+      if (piece && ((piece.color === 'w' && gameState.playerColor === 'white') ||
+                    (piece.color === 'b' && gameState.playerColor === 'black'))) {
+        setSelectedSquare(square);
+        // Показываем возможные ходы
+        const newSquares = getMoveSquares(square);
+        setOptionSquares(newSquares);
+      } else {
+        // Клик в пустом месте - снимаем любое возможное выделение
+        setSelectedSquare(null);
+        setOptionSquares({});
+      }
+    }
+  }, [selectedSquare, isPlayerTurn, chess, gameState, makeMove, getMoveSquares]);
 
-      console.log('♟️ ChessBoard.js initialized successfully');
+  // Обработчик клика по фигуре
+  const onPieceClick = useCallback((piece: string, square: string) => {
+    onSquareClick(square);
+  }, [onSquareClick]);
+
+  const onPieceDrop = useCallback((sourceSquare: string, targetSquare: string) => {
+
+    if (!isPlayerTurn() || !gameState) {
+      return false;
+    }
+
+    // Выполняем ход через GameContext
+    const success = makeMove({
+      from: sourceSquare,
+      to: targetSquare,
     });
 
-    // Cleanup
-    return () => {
-      if (chessboardRef.current && chessboardRef.current.destroy) {
-        chessboardRef.current.destroy();
-        console.log('🧹 ChessBoard destroyed');
-      }
-    };
-  }, [gameState?.id]);
+    return success;
+  }, [isPlayerTurn, gameState, makeMove]);
 
-  // Обновляем позицию когда меняется FEN
-  useEffect(() => {
-    if (chessboardRef.current && gameState) {
-      chessboardRef.current.position(gameState.fen);
-      clearHighlights(); // Очищаем подсветку при обновлении позиции
-      console.log('🔄 Position updated:', gameState.fen);
-    }
-  }, [gameState?.fen]);
-
-  if (!gameState || !chess) {
+  if (!gameState) {
     return (
       <div className="w-full max-w-[800px] mx-auto">
-        <div className="bg-gray-200 rounded-lg p-8 text-center">
-          <p className="text-gray-600">Загрузка шахматной доски...</p>
+        <div className="bg-gray-200 dark:bg-gray-700 rounded-lg p-8 text-center">
+          <p className="text-gray-600 dark:text-gray-300">Загрузка шахматной доски...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-[800px]">
-      <div
-        ref={boardRef}
-        id={`chessboard-${gameState.id}`}
-        style={{
-          width: '100%',
-          borderRadius: '8px',
-          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.5)',
-          zIndex: 20,
-          position: 'relative'
-        }}
+    <div className="w-full max-w-[800px] mx-auto">
+      <Chessboard
+        position={gameState.fen}
+        onPieceDrop={onPieceDrop}
+        onPieceDragBegin={onPieceDragBegin}
+        onSquareClick={onSquareClick}
+        onPieceClick={onPieceClick}
+        boardOrientation={gameState.playerColor === 'white' ? 'white' : 'black'}
+        customSquareStyles={optionSquares}
+        arePiecesDraggable={false}
       />
     </div>
   );

@@ -72,12 +72,14 @@ function HomePage() {
         ) : gameState?.mode === 'online' || isOnlineMode ? (
           <OnlineGame />
         ) : (
-          <div className="flex flex-col md:flex-row md:justify-center md:items-start gap-4 md:gap-0">
+          <div className="flex flex-col md:flex-row md:justify-center md:items-start gap-4 md:gap-8">
             {/* Шахматная доска по центру */}
             <ChessBoard />
 
             {/* Информация об игре справа на ПК */}
-            <GameInfo />
+            <div className="md:flex md:justify-center">
+              <GameInfo />
+            </div>
           </div>
         )}
         </div>
